@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The EmbedCare Brain</title>
+<meta name="description" content="A public, interactive explainer of the EmbedCare Brain: what runs, when, and what each piece leaves for the next. No client, person, price or id appears on this page.">
+<script>
+/* Theme is chosen before first paint. The reader's last tap on this page wins, then a theme the host set on the
+   root element, then the system setting. With no stored tap the page follows the system setting when it changes. */
+(function(){
+  var root = document.documentElement, stored = null;
+  try { stored = localStorage.getItem('brain-theme'); } catch (e) { stored = null; }
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function systemTheme(){ return (mq && mq.matches) ? 'dark' : 'light'; }
+  var hostSet = root.getAttribute('data-theme');
+  var t = (stored === 'light' || stored === 'dark') ? stored : ((hostSet === 'light' || hostSet === 'dark') ? hostSet : systemTheme());
+  root.setAttribute('data-theme', t);
+  if (mq && mq.addEventListener) {
+    mq.addEventListener('change', function(){
+      var s2 = null; try { s2 = localStorage.getItem('brain-theme'); } catch (e) { s2 = null; }
+      if (s2 !== 'light' && s2 !== 'dark') { root.setAttribute('data-theme', systemTheme()); }
+    });
+  }
+})();
+</script>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b2430; --muted:#5d6b7a; --line:#d7dde5; --soft:#eef1f5;
+  --accent:#2457c5; --accent-soft:rgba(36,87,197,.12);
+  --c-cloud:#2f6fdb; --c-feed:#e0802b; --c-build:#7a4fc9; --c-bot:#2d9a67; --c-conn:#1b9aa8; --c-center:#1b2430;
+  --chip:#eef1f5; --shadow:0 10px 30px rgba(20,30,50,.12);
+  --good:#2d9a67; --mid:#e0802b; --low:#c74a4a;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --panel:#171e28; --ink:#e8edf3; --muted:#9aa8b8; --line:#2a3442; --soft:#1f2834;
+  --accent:#6c9bff; --accent-soft:rgba(108,155,255,.16);
+  --c-cloud:#6c9bff; --c-feed:#f0a04f; --c-build:#b08cff; --c-bot:#4fc78f; --c-conn:#4fc3d1; --c-center:#e8edf3;
+  --chip:#232d3a; --shadow:0 10px 30px rgba(0,0,0,.45);
+  --good:#4fc78f; --mid:#f0a04f; --low:#ff7b7b;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+button{font:inherit;color:inherit}
+a{color:var(--accent)}
+a.btn{text-decoration:none;display:inline-block}
+
+/* header */
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top, 0px);z-index:6}
+.hwrap{max-width:1400px;margin:0 auto;padding:12px 16px 0;display:flex;flex-direction:column;gap:8px}
+.hrow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-start}
+.hrow h1{font-size:19px;margin:0;font-weight:680;letter-spacing:-.01em;line-height:1.25}
+.hrow .intro{color:var(--muted);font-size:13px;max-width:880px;margin:3px 0 0}
+.hrow .tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=search]{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:170px}
+.btn{font-size:12.5px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.active,.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:0;background:transparent;padding:9px 12px 10px;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:hover{color:var(--ink)}
+.maptools{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 0 10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12.5px}
+.legend button.off{opacity:.4}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+body:not(.view-map) .maptools{display:none}
+
+/* main */
+main{flex:1;display:flex;flex-direction:column;position:relative;min-height:0;overflow:clip}
+.view{display:none}
+body.view-map #map, body.view-tour #map{display:block}
+body.view-tour #tour{display:flex}
+body.view-clock #clock{display:block}
+body.view-build #build{display:block}
+body.view-howto #howto{display:block}
+
+#map{flex:1;min-height:520px;position:relative;overflow:hidden;cursor:grab;touch-action:none;background:var(--bg)}
+#map.dragging{cursor:grabbing}
+svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.edge{fill:none;stroke:var(--line);stroke-width:1.6}
+.edge.dep{stroke-dasharray:3 4;stroke:var(--muted);opacity:0;stroke-width:1.2}
+.edge.dep.on{opacity:.85;stroke:var(--accent);stroke-width:1.8}
+.edge.on{stroke:var(--accent);stroke-width:2.2}
+.node{cursor:pointer}
+.node rect{fill:var(--panel);stroke:var(--line);stroke-width:1.3;rx:9;ry:9}
+.node:hover rect{stroke:var(--accent)}
+.node.sel rect{stroke:var(--accent);stroke-width:2.2;filter:drop-shadow(0 4px 10px rgba(36,87,197,.25))}
+.node.lit rect{stroke:var(--accent);stroke-width:2}
+.node.dim{opacity:.18}
+.node text{font-size:13px;fill:var(--ink);pointer-events:none}
+.node text.when{font-size:10.5px;fill:var(--muted)}
+.hub rect{fill:var(--panel);stroke-width:2.2;rx:12;ry:12}
+.hub text{font-size:13.5px;font-weight:650}
+.hub text.cnt{font-weight:500;font-size:11px;fill:var(--muted)}
+.center circle{fill:var(--c-center)}
+.center text{fill:var(--bg);font-weight:700;font-size:14px}
+.center text.s{font-weight:500;font-size:10.5px;opacity:.85}
+#hint{position:absolute;left:14px;top:10px;font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;pointer-events:none;max-width:calc(100% - 28px)}
+#mapbtns{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:2}
+#mapbtns .btn{width:34px;height:34px;padding:0;font-size:16px;line-height:1}
+
+/* panel */
+#panel{position:absolute;top:0;right:0;height:100%;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);visibility:hidden;transition:transform .22s ease,visibility 0s .22s;overflow:auto;z-index:5;padding:18px 20px 28px}
+#panel.open{transform:none;visibility:visible;transition:transform .22s ease}
+#panel .close{position:absolute;top:10px;right:12px;border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--muted);width:34px;height:34px;border-radius:8px}
+#panel .close:hover{background:var(--soft)}
+#panel h3{margin:0 0 4px;font-size:18px;letter-spacing:-.01em;padding-right:34px;line-height:1.25}
+.kind{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.kind i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;margin:8px 0 14px;padding:10px 12px;background:var(--soft);border-radius:10px}
+.facts dt{color:var(--muted)}.facts dd{margin:0;word-break:break-word}
+#panel h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 5px}
+#panel p{margin:0 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:4px 9px;border-radius:999px;background:var(--chip);border:1px solid var(--line);color:var(--ink)}
+.chip.link{cursor:pointer}
+.chip.link:hover{border-color:var(--accent);color:var(--accent)}
+.out{background:var(--soft);border-left:3px solid var(--accent);padding:9px 12px;border-radius:0 8px 8px 0;white-space:pre-wrap}
+.out .lab{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+
+/* day clock */
+#clock{flex:1;padding:16px;max-width:1400px;width:100%;margin:0 auto}
+#clock h2{font-size:16px;margin:0 0 4px}
+#clock .sub{color:var(--muted);font-size:13px;margin:0 0 12px;max-width:820px}
+.tl{position:relative;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:8px 0 6px}
+.tl-inner{position:relative;min-width:980px;height:200px}
+.track{position:absolute;left:150px;right:20px;top:0;bottom:0}
+.tl-axis{position:absolute;left:0;right:0;top:0;height:20px;border-bottom:1px solid var(--line)}
+.tl-axis span{position:absolute;top:0;font-size:10.5px;color:var(--muted);transform:translateX(-50%)}
+.tl-axis .tick{position:absolute;top:18px;width:1px;height:160px;background:var(--line);opacity:.5;transform:none}
+.tl-lane{position:absolute;left:0;right:0;height:48px;border-bottom:1px dashed var(--line)}
+.tl-lane b{position:absolute;left:-150px;top:8px;width:140px;font-size:11px;color:var(--muted);font-weight:500;line-height:1.3}
+.mark{position:absolute;top:8px;width:13px;height:13px;border-radius:50%;transform:translateX(-50%);cursor:pointer;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line)}
+.mark.weekly{border-radius:3px}
+.mark.sel{outline:2px solid var(--accent);outline-offset:1px}
+.mark:hover{transform:translateX(-50%) scale(1.3);z-index:2}
+.marklabel{position:absolute;font-size:10px;color:var(--muted);transform:translateX(-50%);white-space:nowrap;pointer-events:none}
+.clocknote{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.clocknote i{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.clocknote i.sq{border-radius:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card h3{margin:0 0 4px;font-size:13.5px}
+.card p{margin:0;color:var(--muted);font-size:12.5px}
+.card .t{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+
+/* tour */
+#tour{position:absolute;left:0;right:0;bottom:0;z-index:4;pointer-events:none;justify-content:center;padding:0 12px 12px}
+.story{pointer-events:auto;width:min(640px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px 12px}
+.story .meta{display:flex;align-items:baseline;gap:10px;font-size:12px;color:var(--muted)}
+.story .meta .time{font-variant-numeric:tabular-nums;font-weight:650;color:var(--accent);font-size:13px}
+.story h3{margin:4px 0 6px;font-size:16px;line-height:1.3}
+.story p{margin:0 0 10px;font-size:13.5px}
+.story .nodes{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.story .nav{display:flex;gap:6px;align-items:center}
+.story .nav .spacer{flex:1}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block;cursor:pointer}
+.dots i.on{background:var(--accent)}
+.dots i.done{background:var(--muted)}
+
+/* build */
+#build{flex:1;padding:18px 16px 24px;max-width:1200px;width:100%;margin:0 auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.col h2{font-size:17px;margin:0 0 10px}
+.col h3{font-size:13.5px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.col p{margin:0 0 8px;font-size:13.5px}
+.col ul{margin:0;padding-left:18px;font-size:13.5px}
+.col li{margin:0 0 6px}
+.layers{display:grid;gap:8px}
+.layer{display:grid;grid-template-columns:28px 1fr;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.layer b{font-size:13.5px}
+.layer .n{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.layer p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.runtimes{display:grid;gap:6px}
+.rt{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.rt i{flex:0 0 10px;width:10px;height:10px;border-radius:50%;margin-top:5px}
+.rt b{font-weight:600}
+.rt span{color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:6px}
+.num{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.num b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.num span{font-size:12px;color:var(--muted);line-height:1.3;display:block}
+.rule{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin-top:6px}
+.rule b{display:block;margin-bottom:4px}
+.rule p{margin:0;font-size:13px}
+.scores{display:grid;gap:8px}
+.score{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.score .lab{font-weight:600}
+.score .val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;grid-row:span 2;align-self:center}
+.score .val small{font-size:12px;color:var(--muted);font-weight:500}
+.score p{margin:0;font-size:13px;color:var(--muted);grid-column:1}
+.bar{height:5px;background:var(--soft);border-radius:3px;overflow:hidden;grid-column:1 / -1}
+.bar i{display:block;height:100%;border-radius:3px}
+table.goals{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+table.goals th,table.goals td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.goals th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+table.goals td.v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.next{counter-reset:nx;display:grid;gap:8px}
+.next div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px 10px 42px;position:relative;font-size:13px}
+.next div::before{counter-increment:nx;content:counter(nx);position:absolute;left:12px;top:10px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.next b{display:block;margin-bottom:2px}
+
+ol.steps{margin:0;padding-left:20px}
+ol.steps li{margin:0 0 5px}
+p.hind{background:var(--soft);border-left:3px solid var(--c-bot);padding:9px 12px;border-radius:0 8px 8px 0}
+
+/* build order */
+#howto{flex:1;padding:18px 16px 24px;max-width:960px;width:100%;margin:0 auto}
+#howto h2{font-size:17px;margin:0 0 6px}
+#howto .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;max-width:720px}
+.stages{display:grid;gap:12px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 56px;position:relative}
+.stage .n{position:absolute;left:14px;top:14px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.stage h3{margin:3px 0 6px;font-size:15px}
+.stage p{margin:0 0 8px;font-size:13.5px}
+.stage .chips{margin:4px 0 10px}
+.stage .hl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 3px}
+.stage p.hind{margin:0}
+.rules{margin:18px 0 0;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.rules h3{margin:0 0 8px;font-size:13.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.rules ul{margin:0;padding-left:18px;font-size:13.5px}
+.rules li{margin:0 0 5px}
+.narrow .stage{padding-left:16px;padding-top:50px}
+.narrow .stage .n{left:16px;top:12px}
+
+footer{border-top:1px solid var(--line);background:var(--panel);padding:10px 16px;font-size:12px;color:var(--muted);text-align:center}
+
+/* phone */
+.mq-note{display:none}
+.narrow .cols{grid-template-columns:1fr}
+.narrow header{position:static}
+.narrow #tour{position:static;padding:8px 12px 14px;pointer-events:auto}
+.narrow.view-tour #map{min-height:42vh;flex:0 0 auto}
+.narrow .story{width:100%;box-shadow:none}
+.narrow #map{min-height:70vh}
+.narrow #panel{width:100%}
+.narrow .hrow .tools{margin-left:0;width:100%}
+.narrow input[type=search]{flex:1;min-width:0}
+.narrow .story{padding:12px 12px 10px}
+.narrow .story p{font-size:13px}
+.narrow #hint{font-size:10.5px}
+.narrow .hrow .intro{font-size:12.5px;line-height:1.4}
+.narrow .tl-inner{min-width:900px}
+.narrow .num b{font-size:19px}
+</style>
+</head>
+<body class="view-map">
+<header>
+  <div class="hwrap">
+    <div class="hrow">
+      <div>
+        <h1>The EmbedCare Brain</h1>
+        <p class="intro">EmbedCare is a white-label telehealth platform. In about six weeks its president, Nate, built a system where every conversation the company has lands in one private, versioned store, and scheduled AI routines read that store and do the day's operating work. This page shows what runs, when, and what each piece leaves behind for the next one. Nothing reaches a client without a human tap.</p>
+      </div>
+      <div class="tools">
+        <input id="q" type="search" placeholder="Search the map" aria-label="Search the map">
+        <a class="btn" href="embedcare-brain-summary.pdf" download>One-page PDF</a>
+        <button class="btn" id="theme" aria-label="Switch between light and dark">Theme</button>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-view="map" aria-selected="true">The map</button>
+      <button class="tab" role="tab" data-view="clock" aria-selected="false">The day clock</button>
+      <button class="tab" role="tab" data-view="tour" aria-selected="false">A day in the life</button>
+      <button class="tab" role="tab" data-view="build" aria-selected="false">How it is built, and what it is not yet</button>
+      <button class="tab" role="tab" data-view="howto" aria-selected="false">Build it yourself</button>
+    </div>
+    <div class="maptools">
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="map" class="view">
+    <svg id="svg" aria-label="Mind map of the EmbedCare Brain"></svg>
+    <div id="hint">Click a box for its card. Drag to pan, scroll or pinch to zoom. Dashed lines show what a selected item reads and feeds.</div>
+    <div id="mapbtns">
+      <button class="btn" id="zin" aria-label="Zoom in">+</button>
+      <button class="btn" id="zout" aria-label="Zoom out">&minus;</button>
+      <button class="btn" id="fit" aria-label="Fit the map to the screen" style="font-size:11px">Fit</button>
+    </div>
+  </div>
+
+  <aside id="panel" aria-live="polite"><button class="close" aria-label="Close">&times;</button><div id="pbody"></div></aside>
+
+  <div id="tour" class="view">
+    <div class="story" id="story"></div>
+  </div>
+
+  <section id="clock" class="view">
+    <h2>The day clock</h2>
+    <p class="sub">When each scheduled job fires, on a 24-hour strip. Circles run every day or every weekday. Squares run weekly. Hover for the name, click for the card. Webhooks, on-demand tools and the always-on loops are not plotted; they run all day. On a narrow screen, scroll the strip sideways for the afternoon.</p>
+    <div class="tl"><div class="tl-inner" id="tl"></div></div>
+    <div class="clocknote" id="clocknote"></div>
+    <div class="cards" id="clockcards"></div>
+  </section>
+
+  <section id="howto" class="view">
+    <h2>Build it yourself</h2>
+    <p class="lead">The order to build this if you started today, with what Nate would do differently. Every card on the map also has its own numbered steps and a line of hindsight. The stages below are a recommendation drawn from six weeks of building, not a diary.</p>
+    <div class="stages" id="stages"></div>
+    <div class="rules" id="rules"></div>
+  </section>
+  <section id="build" class="view">
+    <div class="cols">
+      <div class="col" id="build-left"></div>
+      <div class="col" id="build-right"></div>
+    </div>
+  </section>
+</main>
+
+<footer>Built by one person with Claude, Make, GitHub and a Telegram bot, August to October 2026. Numbers as of the date shown. <span id="asof">2026-10-31</span>.</footer>
+
+<script>
+/* STATS:BEGIN  rewritten every day by the public-map job, rounded down to bands; nothing else in this file is touched */
+var STATS = {"asof": "2026-10-31", "items": "1,000+", "messages7d": "1,000+", "chats7d": "60+", "commitments": "500+"};
+/* STATS:END */
+function fmt(n){ return Number(n).toLocaleString('en-US'); }
+
+/* ---------- data ---------- */
+var BRANCHES = {
+  cloud: {name:'Cloud routines', short:'Cloud routines', color:'var(--c-cloud)', side:'right',
+    note:'Claude routines that run in the cloud on a schedule, without anyone at a laptop. Each has one job and a written playbook. Every one that reads the store does so through the read connector; every one that writes goes through the write connector.'},
+  bot:   {name:'The bot', short:'The bot', color:'var(--c-bot)', side:'right',
+    note:'One small always-on service behind the company Telegram bot. It captures every chat it can see, keeps a fresh copy of the store, checks that every job left its output, relays button taps, and answers questions for the owner and the principals.'},
+  feed:  {name:'Automation feeds', short:'Automation feeds', color:'var(--c-feed)', side:'left',
+    note:'Scenarios on a no-code automation platform (Make). The scheduled ones write source files and index rows into the store. The instant ones react to webhooks. The tools are called by routines when they need to write somewhere a connector cannot reach.'},
+  build: {name:'Build jobs', short:'Build jobs', color:'var(--c-build)', side:'left',
+    note:'GitHub Actions jobs in the store repository. They turn raw files into the index, the commitments lists and the client records, convert reports, apply redactions and scan every push for secrets. Their own schedules run late, so the feeds start the time-critical ones.'},
+  conn:  {name:'Connectors', short:'Connectors', color:'var(--c-conn)', side:'left',
+    note:'Two small serverless servers over the store. The read connector lets routines search and read plain text. The write connector lets them commit to a short list of paths, with a checksum check so nothing is overwritten blind. Both are signed in with one owner account only.'}
+};
+
+var NODES = [
+/* cloud routines */
+{id:'r_calls', b:'cloud', name:'Call transcript pull', when:'06:00 daily', times:['06:00'], days:'daily',
+ what:'A cloud routine that copies the recordings of the company\'s calls from the transcription service into the store.',
+ does:'Looks back three days, skips personal calls, duplicates and anything marked not for the store, strips remarks about anyone\'s health, then writes each transcript as plain text (split into parts when long) with one index row per file through the write connector. Weak matches go to a review folder instead of the transcripts folder.',
+ reads:['Call transcription service','Calendar, to match calls to meetings','b_capture','x_read'],
+ to:['x_write','g_build','r_ticket','m_commitments'],
+ example:'Found 8 recordings, filed 4 as 6 transcript files with 6 index rows: a payments sync, a key account\'s client requests call, and a three-part partner call. One 50-second call went to review. Skipped a duplicate, one call marked confidential, one call that was not company business and one personal call. Left out 3 health remarks.',
+ runs:'06:00 every day. A run takes about 18 minutes, most of it transcript transfer.'},
+{id:'r_labeler', b:'cloud', name:'Email labeler', when:'06:15 weekdays', times:['06:15'], days:'wkd',
+ what:'A cloud routine that reads the president\'s work inbox and decides which threads belong in the store.',
+ does:'Searches the last four days of mail and labels real business threads, both new threads and replies on threads already filed. Works from sender, subject and snippet only. It never opens a thread and never removes a label. Missing a real thread is the expensive mistake, so borderline threads get labeled. The email feed does the filing 30 minutes later.',
+ reads:['Work email inbox'],
+ to:['m_emails'],
+ example:'Labeled 22 threads (8 continuations, 14 new), among them a contract thread from a client, partner pricing for a prospect, three pharmacy availability replies and the e-signature completion notice for a new client\'s agreement. Left a financing offer alone as out of scope.',
+ runs:'06:15 on weekdays, 30 minutes before the email feed.'},
+{id:'r_ticket', b:'cloud', name:'Ticket drafter and follow-ups', when:'07:30 and 17:30 weekdays', times:['07:30','17:30'], days:'wkd',
+ what:'Turns client requests and promises from chats, email and meetings into ticket drafts, updates, closes and nudges, all held for approval.',
+ does:'The morning run covers everything since 17:30 the day before. The evening run covers the day, including the noon team meeting. It writes one queue file per run with every draft (tickets, updates, closes, nudges, chat and email messages) so the morning run can put them in front of Nate with buttons. It also runs the commitment resolver: merges duplicate promises, closes ones with proof of delivery, and writes status changes to a file the index build applies.',
+ reads:['b_capture','g_chatdigest','m_notes','r_calls','Work email','m_kickoff','Ticket tracker','CRM','m_commitments'],
+ to:['x_write','r_coo','Queue folder'],
+ example:'Morning run: 3 tickets (2 sales, 1 added to a pending product ticket), 4 updates, 6 messages ready, one of them an email draft. Item 1 was an urgent heads-up to the CTO that an API key had been pasted into a chat. Item 2 drafted a product ticket on which marketing claims a client may use. Item 3 proposed closing a ticket whose domain setup was now verified.',
+ runs:'07:30 and 17:30 on weekdays. Each run writes one file to the queue folder.'},
+{id:'r_privacy', b:'cloud', name:'Privacy scan', when:'07:30 weekdays', times:['07:30'], days:'wkd',
+ what:'The routine that keeps secrets, patient details and sensitive remarks out of the store and out of CRM notes.',
+ does:'Follows a written playbook and a rulebook of redaction rules. Redacts credentials, patient names, strategy notes and reputational items on its own (with a 24-hour undo), asks Nate at most 5 question cards a day on Telegram, applies every change through the redaction build job, and ends with a heartbeat line that the bot checks for by 09:30.',
+ reads:['g_build','b_capture','CRM notes','g_secret'],
+ to:['x_write','g_redact','Telegram question cards to Nate','Privacy run log'],
+ example:'Screened 36 new records and 495 chat messages. Applied 55 redactions on its own, sent 5 question cards, 0 failed. Traced a failing secret scan to one API key pasted in two chat rows and redacted both under rule A1.',
+ runs:'07:30 on weekdays. Its heartbeat must be in the store by 09:30 or the bot sends Nate a message.'},
+{id:'r_errorwatch', b:'cloud', name:'Automation error watch', when:'07:45 weekdays', times:['07:45'], days:'wkd',
+ what:'The daily health check over every automation feed, tool, build job and feeder routine.',
+ does:'Lists every execution since the last checkpoint and looks for errors, warnings and silent failures (a job that ran but saved nothing). Confirms every filing reached the store with both commits, checks build job runs, platform credits and connections, applies the fixes its playbook allows, logs everything in an error ledger and tells Nate only when something needs him.',
+ reads:['Automation platform run log','g_build','g_chatdigest','CRM notes','Routine run list'],
+ to:['Error ledger (spreadsheet)','Notification to Nate'],
+ example:'All 13 active feeds ran on schedule with no warnings. 22 email threads, 4 meeting notes, the transcripts and 4 accounting reports all reached the store. One 404 from the read tool traced to a daily file-existence probe (benign, ledger updated). Flagged that two new routines had no automatic approval and would stall, and told Nate before their first runs.',
+ runs:'07:45 on weekdays, after the morning feeds and before the 09:00 morning run.'},
+{id:'r_msa', b:'cloud', name:'Contract scan and billing alert', when:'08:00 and 16:00 daily', times:['08:00','16:00'], days:'daily',
+ what:'Watches for newly signed agreements and order form updates and tells accounting exactly what to invoice.',
+ does:'Scans the contracts folder on the shared drive and the e-signature notices in email. For a completed envelope it saves the executed PDF under the naming convention, moves the CRM deal to the signed stage with a dated note, and dedupes on message id in a log. Clean documents: it emails accounting the invoice instructions, updates the billing sheet and posts one line to the sales chat. Unclear ones: an email draft plus one Telegram message with an open-draft button for Nate.',
+ reads:['Contracts folder on the shared drive','Work email (e-signature notices)','CRM'],
+ to:['x_write','Email to accounting','Billing instructions sheet','CRM deals','Contract log','m_tools'],
+ example:'Saved a new client\'s executed agreement from the e-signature completion email, seeded the log with 6 envelopes (three referral agreements marked as not a contract), and logged one file as pending signature because only the client\'s pages were in it.',
+ runs:'08:00 and 16:00 every day. A clean contract is billed within the same run; nobody touches it.'},
+{id:'r_sync', b:'cloud', name:'Daily meeting agenda', when:'08:30 weekdays', times:['08:30'], days:'wkd',
+ what:'Builds the run sheet for the noon team meeting and scores whether yesterday\'s asks got answered.',
+ does:'Reads onboarding portal events, tickets across teams, CRM deal stages, the store and the chat capture, then rewrites two pages: an internal run sheet and a team copy. It ranks rows (onboarding first), grades carried asks as answered, repeat or silent, and sends Nate a summary. Nate often replies in the same session to re-rank or add questions.',
+ reads:['m_kickoff','Ticket tracker','CRM','g_build','g_clients','b_capture','m_notes'],
+ to:['x_write','Run sheet page','Team copy','Notification to Nate'],
+ example:'4 of 12 asks answered since the last sheet (a payments setup, a launch re-dated, a reviewer login, kits by November). New rows: a client build with five urgent tickets and no owner, a client now a priority, a launch timing question. One client signed with no project opened yet. After Nate\'s reply it moved the build to row 3.',
+ runs:'08:30 on weekdays, so the sheet is ready before the noon meeting.'},
+{id:'r_outreach', b:'cloud', name:'Inbound outreach triage', when:'08:53 daily', times:['08:53'], days:'daily',
+ what:'A chief-of-staff pass over new partnership, vendor and business-development emails to Nate.',
+ does:'Finds inbound outreach from the last two days, researches the sender on the web, writes a short brief, saves a reply as an email draft (never sends), adds a CRM note and labels the thread so the next run skips it.',
+ reads:['Work email','Web search','CRM'],
+ to:['Email drafts','Briefs folder','CRM notes','Notification to Nate'],
+ example:'One handled: a server-side ad pixel vendor referred by a partner. Rated low fit (partner stores are not on that platform, and sharing health data with an ad network is the risk). The draft asks four questions before any call. Brief saved, note placed on the referrer\'s company record. Skipped a thread that was existing-client work.',
+ runs:'08:53 every day. Drafts wait for Nate\'s tap in the 09:00 morning run.'},
+{id:'r_coo', b:'cloud', name:'COO morning run', when:'09:00 weekdays, plus every tap', times:['09:00'], days:'wkd',
+ what:'The daily runner. Proves the overnight system ran, fixes what it safely can, and puts the few things that need Nate in front of him with buttons.',
+ does:'Checks that every registry job between 06:00 and 09:00 ran and its output landed, re-runs safe fixes, collects every draft waiting on Nate (ticket queue, contract and outreach email drafts, held items), screens them for leaks and invented dates, ranks by money and client impact, then sends one top message plus up to five items with Send, Hold and Skip buttons. A tap or a reply fires the routine again within seconds through the bot. It sends or files in the original channel and records what it did. Only the 09:00 run rewrites the ledger.',
+ reads:['Registry of everything that runs','r_ticket','r_msa','r_outreach','b_checks','m_commit_push','Automation platform run log','Calendar','Work email','x_read'],
+ to:['x_write','Telegram to Nate (buttons)','Daily ledger','Tap files','Email, chat groups, tickets and CRM (after a tap)'],
+ example:'16 registry jobs between 06:00 and 09:00 ran and landed. Three taps that morning (send, skip, send). The outreach reply went out from Nate\'s own mailbox. Three held drafts were found deleted, not sent. Flags: the redaction job failed twice then landed; one new routine was not yet in the registry.',
+ runs:'09:00 on weekdays, and again within seconds of every button tap or reply.'},
+{id:'r_sourcing', b:'cloud', name:'Product sourcing desk', when:'10:00 weekdays', times:['10:00'], days:'wkd',
+ what:'The desk that answers \'can you get X?\' from clients and prospects and keeps one record of every price quoted.',
+ does:'Reads the sourcing log (requests, products, pharmacy offers, outreach, client quotes), checks pharmacy price files on the shared drive, emails pharmacy partners for anything not found (Monday and Thursday are outreach days), records replies and days-to-reply, marks quotes as sent when it finds them in sent mail, and drafts one reply per client with yes or no and an indicative price. Anything ambiguous is held for Nate.',
+ reads:['Work email','Pharmacy pricing folder','r_pricing'],
+ to:['Sourcing log (spreadsheet)','Emails to pharmacy partners','Summary to Nate'],
+ example:'Sent 7 availability emails to pharmacy partners covering 8 products and logged each. Matched Nate\'s reply to a prospect and marked 11 quotes as sent. Recorded one pharmacy\'s reply (no matching products). Held 4 requests for Nate, including two with package sizes that could not be compared.',
+ runs:'10:00 on weekdays. Outreach emails go out on Mondays and Thursdays.'},
+{id:'r_keyacct', b:'cloud', name:'Key account daily update draft', when:'18:00 weekdays', times:['18:00'], days:'wkd',
+ what:'Drafts the daily update Nate posts to one key account\'s group chat. Never posts it.',
+ does:'Starts from Nate\'s last posted update, reads that account\'s chats, meeting notes and calls since, and rewrites each section (launch status, next product line, shipments, kits, reporting, weekly call) with what changed and what the account owes us. Writes the draft to the queue and sends Nate the draft plus notes.',
+ reads:['b_capture','m_notes','r_calls','x_read','g_clients'],
+ to:['x_write','Queue folder','Telegram message to Nate'],
+ example:'Launch on track with a product shortlist agreed. One product held back until a prerequisite is in place. Next line queued. Shipment delivered Monday. Kits blocked on the pharmacy. Reporting portal live in beta. Weekly call set for Thursday.',
+ runs:'18:00 on weekdays. Nate edits and posts it himself.'},
+{id:'r_lead', b:'cloud', name:'Lead resolver', when:'19:30 daily', times:['19:30'], days:'daily',
+ what:'Makes the CRM the one true record of every lead and deal.',
+ does:'Reads website leads, bookings, chat intros, email, calls and signed agreements from the last three days. Every inbound lead becomes one person, one company and one deal with source, referrer and owner (the person who hosted the first call, else the evidence, else a rotation). Keeps stage, first call date, tier, fee basis, agreement dates, go-live and churn in line with the evidence, merges clear duplicates, runs data checks, and leaves one CRM task per deal to its owner (at most 10 a run). Writes an audit file of every change.',
+ reads:['New lead emails','m_bookings','b_capture','m_emails','r_calls','m_notes','Contracts folder','Billing sheet','x_read'],
+ to:['x_write','CRM people, companies, deals and tasks','Audit file in the queue folder'],
+ example:'Created deals for two booked calls (one owned by Nate, one by the sales lead) and one prospect whose first call was held four days earlier, plus four new-stage deals from website forms and chat intros, flagged to their owners because the fit or the company was unclear.',
+ runs:'19:30 every day. On Mondays it also sweeps deals that have been quiet for 30 days.'},
+{id:'r_audit', b:'cloud', name:'Weekly health audit', when:'Monday 06:50', times:['06:50'], days:'weekly',
+ what:'A read-only audit of the whole store against the operating rules, once a week.',
+ does:'Checks every feed\'s week of executions, coverage gaps (every meeting note has a copy in the store and an index row with a file), index hygiene, build job runs, dedupe stores and shared-drive versus store counts. Leads with what is broken, writes a dated health note and tells Nate.',
+ reads:['Automation platform run log','g_build','Shared drive','m_notes','m_chatdigest'],
+ to:['Notification to Nate','Weekly health note'],
+ example:'Two findings. A restricted copy of one team meeting had been re-filed into the open meetings folder (fix: exclude the restricted folder). The chat digest feed had failed two days running and was one failure from being auto-disabled. Nothing fell through: all 28 meeting notes of the week had a copy in the store.',
+ runs:'Mondays at 06:50, before the working week\'s first morning run.'},
+{id:'r_pricing', b:'cloud', name:'Weekly pharmacy pricing scan', when:'Monday 08:00', times:['08:00'], days:'weekly',
+ what:'A weekly pass over pharmacy partner bids and price lists against the reference price list.',
+ does:'Searches eight days of email for pharmacy pricing, saves new price files to the pricing folder, logs new products in a dated additions sheet, compares cost per unit with the reference list, and emails an internal digest to the four people who need it, only when there is something new. It never edits the master pricing database itself.',
+ reads:['Work email','Pharmacy pricing folder','Master pricing database'],
+ to:['Pharmacy pricing folder','Internal digest email','Notification to Nate','r_sourcing'],
+ example:'One pharmacy was new. Logged 26 products in a dated additions sheet. None beat the reference list on the same specification, and one line needs its concentration confirmed. A quote another pharmacy had promised for the previous week still had not arrived.',
+ runs:'Mondays at 08:00.'},
+
+/* automation feeds */
+{id:'m_chatdigest', b:'feed', name:'Chat digest trigger', when:'06:00 daily', times:['06:00'], days:'daily',
+ what:'A two-step feed that starts the chat digest build job on time.',
+ does:'Sends a dispatch to the store\'s repository so the digest job builds yesterday\'s chat digest from the bot\'s capture files. The build jobs\' own schedules run late, so this feed starts it at 06:00 exactly.',
+ reads:['b_capture'],
+ to:['g_chatdigest'],
+ example:'Run status success. The digest job completed and committed one digest file for the previous day, with a section per chat.',
+ runs:'06:00 every day.'},
+{id:'m_notes', b:'feed', name:'Meeting notes feed', when:'06:30, 16:45, 19:00 daily', times:['06:30','16:45','19:00'], days:'daily',
+ what:'Copies Nate\'s own AI meeting notes from the shared drive into the store.',
+ does:'Searches the drive for new meeting notes, skips ones already seen, waits until a note has been unchanged for 30 minutes, converts it to markdown, writes the file to the meetings folder (or the review folder when it cannot tell the meeting is company business) and an index row. The 16:45 run catches the noon team meeting. Errors alert Nate on Telegram and the item retries next run.',
+ reads:['Shared drive (meeting notes)'],
+ to:['g_build','m_crm_notes','m_commitments','r_ticket'],
+ example:'Filed the day\'s team meeting note and two planning notes, each with a note commit and an index row commit.',
+ runs:'06:30, 16:45 and 19:00 every day.'},
+{id:'m_notes_shared', b:'feed', name:'Shared meeting notes feed', when:'06:35, 16:50, 19:05 weekdays', times:['06:35','16:50','19:05'], days:'wkd',
+ what:'Same as the meeting notes feed, for notes other people own and share with Nate.',
+ does:'Lists drive files shared with Nate whose title marks them as meeting notes, then runs the same seen-check, convert, write and index steps.',
+ reads:['Shared drive (shared with me)'],
+ to:['g_build','m_crm_notes','m_commitments'],
+ example:'Ran at 06:35 with nothing new (an idle run of 2 to 3 operations). Earlier in the week it filed a colleague\'s copy of the team meeting.',
+ runs:'06:35, 16:50 and 19:05 on weekdays, five minutes after the main notes feed.'},
+{id:'m_emails', b:'feed', name:'Email feed', when:'06:45 weekdays', times:['06:45'], days:'wkd',
+ what:'Files every labeled email thread into the store.',
+ does:'Searches the inbox for labeled threads not yet marked done, folds each thread into one markdown file, writes the file to the email folder plus an index row, then adds the done label so the thread is not filed twice. An \'already exists\' response from the store counts as done. Other errors alert Nate and the thread retries.',
+ reads:['r_labeler','Work email'],
+ to:['g_build','r_lead','r_ticket'],
+ example:'Filed 22 threads, each with a thread commit and an index row commit: a client\'s contract thread, partner pricing for a prospect, a forwarded pharmacy price list.',
+ runs:'06:45 on weekdays, 30 minutes after the labeler.'},
+{id:'m_commit_push', b:'feed', name:'Commitments nudge', when:'06:50 daily', times:['06:50'], days:'daily',
+ what:'The morning nudge about promises that are overdue or due within 48 hours.',
+ does:'Starts the index build, waits 120 seconds, reads the push digest the build wrote (overdue or due within 48 hours, high confidence or accepted) and sends it to Nate on Telegram if it has items.',
+ reads:['m_commitments','g_build'],
+ to:['Telegram message to Nate','r_coo'],
+ example:'The digest opens with \'Overdue, we owe\' and lists items such as an account manager\'s promise to send a client its agreement, Nate\'s promise to call a client about a catalog date, and an internal launch item.',
+ runs:'06:50 every day.'},
+{id:'m_transcript_inbox', b:'feed', name:'Transcript inbox', when:'07:00 daily', times:['07:00'], days:'daily',
+ what:'The manual path for transcripts: files dropped by hand into an inbox folder on the shared drive.',
+ does:'Watches the inbox folder, reads each file, writes it to the transcripts folder with an index row, and moves the drive file to a processed folder. The daily transcript pull replaced this for normal use.',
+ reads:['Shared drive inbox folder'],
+ to:['g_build'],
+ example:'No run, nothing dropped. Last real work a week earlier (10 operations).',
+ runs:'07:00 every day. Idle unless a file is dropped.'},
+{id:'m_crm_notes', b:'feed', name:'CRM meeting notes', when:'07:15 daily', times:['07:15'], days:'daily',
+ what:'Posts a Claude-written summary of each new meeting note to the right CRM record.',
+ does:'Starts the index build, reads the newest 120 meeting rows with files, skips seen ones, reads the meeting markdown, asks Claude for a note, matches the company by linked record, name or domain, falls back to the person by external email and last to the internal record, then creates the CRM note. Its list of known company aliases must match the master aliases list.',
+ reads:['m_notes','m_notes_shared','g_build'],
+ to:['CRM notes','g_build'],
+ example:'Status success. CRM notes created since the previous day included meeting summaries matched to company records and reply notes matched to people.',
+ runs:'07:15 every day.'},
+{id:'m_commitments', b:'feed', name:'Commitment extraction', when:'07:20 daily', times:['07:20'], days:'daily',
+ what:'Extracts commitments and client promises from new meetings, transcripts and chat digests.',
+ does:'Reads the list of commitment sources, skips seen ones, sends each source file to Claude for extraction, and writes one file per commitment to a rows folder. The index build merges them into two lists, all commitments and client promises, which are the only copies that count.',
+ reads:['m_notes','m_notes_shared','r_calls','g_chatdigest'],
+ to:['Commitment rows','g_build','r_ticket','m_commit_push'],
+ example:'Ran clean. Recent rows include an account manager\'s promise to a client to circle back with feedback by a set date, which the ticket drafter picked up the same evening.',
+ runs:'07:20 every day.'},
+{id:'m_reports', b:'feed', name:'Accounting reports feed', when:'14:00 daily', times:['14:00'], days:'daily',
+ what:'Pulls every accounting report email (spreadsheets, PDFs, client invoices) into the store.',
+ does:'Searches email for the accounting system\'s notifications, saves each attachment and a metadata file into a dated raw folder, then dispatches the report conversion job. The store rejecting an existing path counts as already filed.',
+ reads:['Work email (accounting notifications)'],
+ to:['g_reports'],
+ example:'A dated raw folder written. Reports converted that day included a transaction list by date (payments received), an invoice list by date (new invoices) and one client invoice.',
+ runs:'14:00 every day.'},
+{id:'m_overdue', b:'feed', name:'Overdue invoice reminder', when:'14:20 daily', times:['14:20'], days:'daily',
+ what:'A daily Telegram reminder of overdue client invoices.',
+ does:'Reads the accounting data in the store and sends Nate a Telegram message listing what is overdue.',
+ reads:['g_reports'],
+ to:['Telegram message to Nate'],
+ example:'Sent. Two invoices listed as overdue with their ages in days. One had been chased the week before.',
+ runs:'14:20 every day, 20 minutes after the accounting reports feed.'},
+{id:'m_kickoff', b:'feed', name:'Onboarding portal events', when:'Instant (webhook)', times:[], days:'instant',
+ what:'Receives events from the client onboarding portal.',
+ does:'A webhook that writes each event (kickoff created, questionnaire submitted, lead) as a JSON file into a kickoffs folder and alerts Nate on error. The ticket drafter and the meeting agenda read these for onboarding status.',
+ reads:['Onboarding portal webhook'],
+ to:['Kickoffs folder','r_ticket','r_sync','g_clients'],
+ example:'A client in onboarding submitted the post-contract questionnaire (29 of 30 answered). Two lead events the next morning.',
+ runs:'Instantly, on every portal event.'},
+{id:'m_bookings', b:'feed', name:'Booking to CRM', when:'Instant (webhook)', times:[], days:'instant',
+ what:'Turns every booked call into a CRM person and a booking note.',
+ does:'On each booking webhook it checks a datastore for the booking, finds or creates the CRM person and company, and writes a note whose host line names the team member who took the call. The lead resolver uses that host line to set the deal owner.',
+ reads:['Booking tool webhook'],
+ to:['CRM','r_lead'],
+ example:'Two bookings in a day, one with Nate and one with the sales lead. Both became CRM deals at the booked-call stage in the 19:30 resolver run.',
+ runs:'Instantly, on every booking.'},
+{id:'m_indexrows', b:'feed', name:'Manual index rows', when:'On demand', times:[], days:'ondemand',
+ what:'Flushes hand-queued index rows from a datastore into the store.',
+ does:'Reads queued records, writes each as one JSON file in the index rows folder, deletes the record on success and alerts on error so items retry.',
+ reads:['Index queue datastore'],
+ to:['g_build'],
+ example:'Queue at 0 records. Nothing to flush.',
+ runs:'On demand.'},
+{id:'m_tools', b:'feed', name:'Automation tools', when:'Called by routines', times:[], days:'ondemand',
+ what:'Single-purpose scenarios exposed as tools, so cloud routines can write where connectors cannot.',
+ does:'Store: read a file, rebuild the index, write a transcript, write an operations file, apply a redaction. Telegram: send to Nate, send with buttons, post to a group as the helper. Email: save an attachment to the shared drive. CRM: schema calls. Spreadsheets: read, write, append, clear, list tabs. Since the write connector went live, the store tools are the fallback behind it.',
+ reads:['r_coo','r_msa','r_privacy','r_calls','r_sourcing','r_keyacct','r_errorwatch'],
+ to:['The store','Telegram','Shared drive','Spreadsheets','CRM','g_redact'],
+ example:'The save-attachment tool, new that day, saved a client\'s executed agreement into the contracts folder and wrote its receipt. The write-operations tool wrote the evening ticket queue file and the lead resolver\'s audit file.',
+ runs:'On demand, called by routines.'},
+
+/* build jobs */
+{id:'g_build', b:'build', name:'Index build', when:'On dispatch, plus every 15 minutes', times:[], days:'always',
+ what:'The job that turns the raw files into the index and the lists every reader uses.',
+ does:'Rebuilds the index and its JSON views, tags meeting and call rows with kind, series, sensitivity and scope from a tags file, merges commitment rows into the commitments lists and applies queued commitment updates. Its last step rebuilds the client records. Commits under its own bot identity.',
+ reads:['Index rows folder','Commitment rows','Commitment updates in the queue folder','Meeting tags file'],
+ to:['Index files','Commitments lists','g_clients','x_read','b_sync','r_coo','r_lead','m_crm_notes'],
+ example:'Commits titled \'Rebuild index and commitments\'. The recent-items view carried 352 rows, 38 of them logged since the previous morning.',
+ runs:'On every push and on dispatch from feeds and routines, with a 15-minute fallback schedule.'},
+{id:'g_chatdigest', b:'build', name:'Chat digest', when:'Dispatched 06:00, 05:30 fallback', times:[], days:'always',
+ what:'Builds yesterday\'s chat digest from the bot\'s capture files.',
+ does:'Groups the previous day\'s captured messages by chat, writes one digest file plus an index row, and commits. Skips days with no text messages.',
+ reads:['b_capture','m_chatdigest'],
+ to:['Digests folder','g_build','r_ticket','m_commitments'],
+ example:'One digest file with a section per chat: an advisor chat on card-brand fees and pipeline, the finance chat on an invoice routing mix-up, a client chat with an account manager\'s onboarding update.',
+ runs:'Dispatched at 06:00 by the chat digest trigger, with a 05:30 fallback schedule.'},
+{id:'g_reports', b:'build', name:'Report conversion', when:'After the 14:00 feed, 09:30 fallback', times:[], days:'always',
+ what:'Converts raw accounting attachments into readable reports.',
+ does:'Decrypts encrypted client invoices with an imported key, converts each spreadsheet or PDF to markdown and CSV under a dated reports folder, and writes an index row per report.',
+ reads:['m_reports'],
+ to:['Reports folder','g_build','m_overdue'],
+ example:'Three conversions: a transaction list by date, an invoice list by date, and one client invoice.',
+ runs:'Dispatched after the 14:00 accounting feed, with a 09:30 fallback schedule.'},
+{id:'g_redact', b:'build', name:'Privacy redaction', when:'Dispatched by the privacy scan', times:[], days:'always',
+ what:'Applies the privacy scan\'s decisions to the store.',
+ does:'Handles five operations from the dispatch payload: redact text in a file, restrict (move to a restricted folder), undo within 24 hours, heartbeat (end-of-run line) and rule (append an approved rule to the rulebook). Redoes the change from a fresh main branch on every retry.',
+ reads:['r_privacy','m_tools'],
+ to:['Store files','Privacy run log','Redaction rulebook'],
+ example:'Commits \'Privacy: redact api key\' in two capture files, then \'Privacy: out-of-band run note\' for the day.',
+ runs:'Dispatched by the privacy scan, usually between 07:30 and 09:00.'},
+{id:'g_secret', b:'build', name:'Secret scan', when:'Every push', times:[], days:'always',
+ what:'A credential scan over every push, so a key cannot sit in the store unnoticed.',
+ does:'Scans the pushed files for keys, tokens and card numbers. A failure emails the owner. The privacy scan and the ticket drafter pick it up from there.',
+ reads:['Every push'],
+ to:['Email to the owner','r_privacy','r_ticket'],
+ example:'Began failing in the evening after an API key was pasted into a chat and captured. The ticket drafter drafted the heads-up to the CTO. The privacy scan redacted the two rows that night and the scan went green.',
+ runs:'On every push to the store.'},
+{id:'g_clients', b:'build', name:'Client records', when:'Last step of every index build', times:[], days:'always',
+ what:'One record per client, the unit the other routines now read instead of re-deriving who owns what from the index.',
+ does:'Reads only store files (account owners, aliases, contacts, onboarding events, commitments, the chat capture, the index, accounting notes) and writes one record per client: status, owner, dates, fee basis, pharmacy partner, onboarding counts, open asks and promises, open tickets, hand-written facts, last contact, 20 history lines. Exact or alias matching only. Anything it cannot place goes to an unmatched list. Hand-written lines are copied through untouched.',
+ reads:['g_build','m_commitments','m_kickoff','b_capture','Aliases list'],
+ to:['Client record files','Unmatched list','b_status','r_sync','r_keyacct','x_read'],
+ example:'Every record rebuilt on each index build. Nothing on the unmatched list needs action; prospects and partners are filed there as no record by rule. One client\'s record shows live, owner an account manager, six open promises from us, last contact that afternoon.',
+ runs:'As the last step of every index build.'},
+
+/* the bot */
+{id:'b_capture', b:'bot', name:'Chat capture', when:'Every 10 minutes', times:[], days:'always',
+ what:'Every Telegram message the bot can see, written into the store.',
+ does:'Buffers group, direct and business-account messages on the bot\'s disk, redacts credentials, and commits them in batches to one capture file per day. Client direct messages are captured but never answered by Claude.',
+ reads:['Telegram updates'],
+ to:['Capture folder','g_chatdigest','g_build','r_ticket','r_lead','r_privacy','r_keyacct','x_read'],
+ example:'Evening commits: \'Chat capture (+8)\', \'(+9)\', \'(+2)\', \'(+1)\', \'(+5)\'. The output check at 19:40 showed the last captured message at 19:09.',
+ runs:'Every 10 minutes, all day.'},
+{id:'b_sync', b:'bot', name:'Store sync', when:'Every 15 minutes', times:[], days:'always',
+ what:'Keeps the bot\'s local copy of the store current, so answers come from fresh data.',
+ does:'Pulls the store into the bot\'s workspace, writes a filtered copy of the index for the principals tier (everything except staff-only talk), then triggers the output checks.',
+ reads:['g_build'],
+ to:['b_checks','b_qa','b_status'],
+ example:'Each sync reports the file count and the latest store commit. The 19:40 output check ran right after one.',
+ runs:'Every 15 minutes, all day.'},
+{id:'b_checks', b:'bot', name:'Output checks', when:'After every sync, own deadlines', times:[], days:'always',
+ what:'Did every scheduled job leave its output in the store by its deadline?',
+ does:'Reads a checks file (edit there, no deploy), evaluates each check whose deadline has passed (files, index rows, index completeness, capture freshness), asks the automation platform\'s run log whether a missing output means idle or broken, messages Nate once per missing item per day, and rewrites a status file when a status changes.',
+ reads:['b_sync','Automation platform run log','Checks file'],
+ to:['Telegram message to Nate','Status file','r_coo'],
+ example:'10 ok, one waiting, and the transcript pull unknown because the run log call returned an error (there had been nothing to file). The day before: 11 ok and 1 missing, the morning run\'s ledger note.',
+ runs:'After every store sync, so every 15 minutes. Each check has its own deadline.'},
+{id:'b_erroralerts', b:'bot', name:'Automation error alerts', when:'Every 10 minutes', times:[], days:'always',
+ what:'The fast path for automation platform failures, since the platform\'s own emails go to a different address.',
+ does:'Polls the platform for failed or warning executions, scenarios turned inactive or invalid, dead-letter items, credits crossing 75, 90 and 100 percent and connections expiring within 7 days, and messages Nate once per event.',
+ reads:['Automation platform run log'],
+ to:['Telegram message to Nate','r_errorwatch'],
+ example:'Two 404 errors from the store read tool were reported through this path the evening before the morning error watch looked at them.',
+ runs:'Every 10 minutes, all day.'},
+{id:'b_export', b:'bot', name:'Nightly automation snapshots', when:'Once a night', times:[], days:'always',
+ what:'A nightly copy of every feed and tool definition into the store, so every change has history and a rollback.',
+ does:'Once a night it saves every scenario and tool blueprint to a snapshots folder in one commit, with sample data stripped and secrets redacted. It shares its loop with the automation error alerts. The cloud routines are snapshotted the same way after every edit.',
+ reads:['Automation platform','b_erroralerts'],
+ to:['Snapshots folder'],
+ example:'The snapshots folder holds 29 blueprint files. A diff between two nights shows exactly which module of which feed changed.',
+ runs:'Once a night.'},
+{id:'b_crm_person', b:'bot', name:'CRM person per new sender', when:'On first message', times:[], days:'always',
+ what:'Every new Telegram sender becomes a CRM person.',
+ does:'Checked once per sender: creates the person with name, handle and chat id. The lead resolver later turns the ones that are leads into deals.',
+ reads:['Telegram updates'],
+ to:['CRM people','r_lead'],
+ example:'Two people who messaged Nate on consecutive days already existed as CRM people when the resolver created their deals.',
+ runs:'On the first message from a sender.'},
+{id:'b_buttons', b:'bot', name:'Button relay', when:'Within seconds of a tap', times:[], days:'always',
+ what:'The bridge between Nate\'s thumb and the morning run.',
+ does:'Recognises Send, Hold and Skip taps, Send all, Show more, and replies to item messages or short answers like \'1 yes, 2 hold\', then fires the morning run\'s trigger with the payload. The bot itself never sends or files anything.',
+ reads:['Telegram taps and replies in Nate\'s chat'],
+ to:['r_coo'],
+ example:'Tap files such as \'tap, item 21, skip\'. A contract email was held by a tap and then sent by Nate himself.',
+ runs:'Within seconds of a tap or reply.'},
+{id:'b_status', b:'bot', name:'Client status command', when:'On request', times:[], days:'always',
+ what:'The first team-facing answer path: the client record, read back in Telegram with no Claude call.',
+ does:'A status command prints the record header, open ask, promise and ticket counts and last contact from the bot\'s copy of the store. Without a name it lists every client. A full variant posts the whole record. Matches slug, display name or alias, else a unique prefix. Hides source paths, chat ids and hand markers. The owner can set hand fields and add dated facts from the chat.',
+ reads:['g_clients','b_sync'],
+ to:['Telegram reply','Client record files (hand fields)'],
+ example:'status, Client A. Live since a date, owner an account manager, 2 open asks, 6 open promises from us, 3 open tickets, last contact today 15:35.',
+ runs:'On request in Telegram. Owner only for the first week, then the principals tier.'},
+{id:'b_qa', b:'bot', name:'Questions and answers', when:'On request', times:[], days:'always',
+ what:'Ask the bot a question about the business and get an answer from the store.',
+ does:'Owner and principals tiers. Each tier sees a different filtered copy of the index. Searches the store, reads the best matches and answers with the date, type and title of each source. Clients and outside parties are never answered by Claude.',
+ reads:['b_sync','x_read'],
+ to:['Telegram reply'],
+ example:'Question: \'what did we agree with Client B on go-live?\' Answer: three dated sources, the agreed month, and the open item blocking it, with the record owner named.',
+ runs:'On request in Telegram, all day.'},
+
+/* connectors */
+{id:'x_read', b:'conn', name:'Read connector', when:'Always on', times:[], days:'always',
+ what:'A small read-only server over the store, so routines read files as plain text instead of decoding repository API responses.',
+ does:'Tools: search (most-words matching over the note text, dates in the query become a filter, series and scope filters, recency boost, paging), get item (paged), list, chat lookup, status. Signed in with one owner account only. All 11 routines that read the store use it. The platform read tool stays for checksum reads and read-back after writes.',
+ reads:['g_build','b_capture'],
+ to:['r_coo','r_ticket','r_privacy','r_errorwatch','r_msa','r_sync','r_lead','r_audit','r_keyacct','r_calls','b_qa'],
+ example:'After one day\'s team meeting could not be found by product words, the index build began writing the note text into a details file and the search was rebuilt. A query by product and scope now returns that note first.',
+ runs:'Always on, as a serverless worker.'},
+{id:'x_write', b:'conn', name:'Write connector', when:'Always on', times:[], days:'always',
+ what:'The door routines use to commit to the store, replacing four platform tools, with the path list and the checksum check enforced on the server.',
+ does:'Tools: read for write (fresh content plus checksum, or a writable folder listing), write file (create, or replace with the checksum), rebuild index. Writable only: the ledger, two logs, the queue folder, new transcript, review and index row files, existing client records (hand lines and facts only), and the aliases and contacts lists. Card numbers and API keys are masked before writing. Nothing can be deleted. Own sign-in app and token. Connected to routines only, never to general chats.',
+ reads:['r_coo','r_ticket','r_privacy','r_msa','r_sync','r_lead','r_keyacct','r_calls'],
+ to:['The store','g_build'],
+ example:'Tested from a cloud routine (create, read back with checksum, the index itself refused), then the first live writes: the key account draft and the evening ticket queue file, both committed under the connector\'s own identity.',
+ runs:'Always on. All 8 writing routines use it. The platform tools stay as fallback for a few days.'}
+];
+
+var TOUR = [
+ {time:'06:00', title:'The day starts in the dark', nodes:['r_calls','m_chatdigest','g_chatdigest','b_capture'],
+  text:'A Thursday. The transcript pull copies yesterday\'s recorded calls into the store: three partner calls filed, one personal call skipped, three health remarks left out. At the same minute a feed starts the chat digest job, which turns yesterday\'s few hundred Telegram messages, captured every 10 minutes through the night, into one file with a section per chat.'},
+ {time:'06:15 and 06:45', title:'The thread that gets labeled', nodes:['r_labeler','m_emails'],
+  text:'The labeler reads four days of the inbox from sender, subject and snippet alone and labels 22 threads as company business, a client\'s contract thread among them. Half an hour later the email feed folds each labeled thread into one file, writes it to the store with an index row, and marks the thread done so it is never filed twice.'},
+ {time:'06:30 to 06:50', title:'Notes land, the index rebuilds, a promise gets nudged', nodes:['m_notes','m_notes_shared','g_build','m_commit_push'],
+  text:'Meeting notes from yesterday\'s calls arrive once they have sat unchanged for 30 minutes. The index build turns every row in the store into the index and the commitments lists. At 06:50 the nudge reads the digest the build left behind and sends Nate the promises that are overdue or due within 48 hours: an account manager owes a client an agreement, Nate owes a client a call.'},
+ {time:'07:15 and 07:20', title:'The CRM gets a note, the promises get extracted', nodes:['m_crm_notes','m_commitments'],
+  text:'Every new meeting note becomes a Claude-written summary on the right CRM company record. Five minutes later the extraction feed reads the same notes, the transcripts and the chat digest and writes one small file per commitment: who promised what to whom, by when. The next index build merges them into the lists.'},
+ {time:'07:30', title:'Two routines, same minute', nodes:['r_ticket','r_privacy','g_redact','g_secret'],
+  text:'The ticket drafter reads everything since 17:30 yesterday and writes one queue file: three tickets, four updates, six messages, all drafts. The privacy scan screens the same new material, 36 records and 495 chat messages. It applies 55 redactions on its own, sends five question cards to Nate, and pushes every change through the redaction job with a 24-hour undo.'},
+ {time:'07:45', title:'Someone checks the checkers', nodes:['r_errorwatch','b_erroralerts','b_checks'],
+  text:'The error watch lists every feed execution since yesterday\'s checkpoint and looks for errors and silent failures, meaning a job that ran but saved nothing. Today 13 feeds ran clean and one 404 traced to a harmless probe. The bot has been doing the fast version every 10 minutes all night, and its output checks have been confirming each job\'s file landed by its deadline.'},
+ {time:'08:00', title:'The contract that bills itself', nodes:['r_msa','m_tools'],
+  text:'The contract scan finds an e-signature completion notice from legal. It saves the executed PDF under the naming convention, moves the CRM deal to signed with a dated note, emails accounting exactly what to invoice, updates the billing sheet and posts one line to the sales chat. Nobody touched it. An unclear document would instead have become a draft with a button for Nate.'},
+ {time:'08:30 and 08:53', title:'The meeting gets prepared', nodes:['r_sync','r_outreach','m_kickoff'],
+  text:'The agenda routine reads onboarding events, tickets, CRM stages and chats and rewrites the noon meeting\'s run sheet: 4 of 12 carried asks answered, and a client build with five urgent tickets and no owner moved to row 3. At 08:53 the outreach triage researches one new vendor pitch, rates the fit, and leaves the reply as a draft.'},
+ {time:'09:00', title:'Five drafts reach Nate\'s phone', nodes:['r_coo','b_buttons','x_write'],
+  text:'The morning run checks that all 16 overnight jobs ran and landed, collects every draft waiting on Nate, screens them for leaks and invented dates, ranks them by money and client impact, and sends one top message plus five items with Send, Hold and Skip buttons. Nate taps send, skip, send. Each tap fires the routine again within seconds. It sends or files in the original channel and records what it did.'},
+ {time:'10:00 to 14:20', title:'The middle of the day', nodes:['r_sourcing','m_reports','g_reports','m_overdue'],
+  text:'The sourcing desk answers \'can you get X?\' for two clients, emails pharmacy partners for the rest and holds four ambiguous asks for Nate. At noon the team meets off the run sheet. At 14:00 the accounting feed pulls the day\'s reports and the conversion job makes them readable. At 14:20 Nate gets the overdue invoice list.'},
+ {time:'16:00 to 18:00', title:'The afternoon pass', nodes:['r_msa','m_notes','r_ticket','r_keyacct'],
+  text:'The contract scan runs again. At 16:45 the notes from the noon meeting land once they stop changing. At 17:30 the ticket drafter covers the day including that meeting: one product ticket, four updates, one close, five messages ready. At 18:00 the key account routine drafts the daily update Nate will post to that account\'s group chat and sends it to him. It never posts.'},
+ {time:'19:30', title:'The lead that becomes a record', nodes:['r_lead','m_bookings','b_crm_person','b_capture','b_sync','x_read','x_write'],
+  text:'A prospect booked a call through the website this afternoon. The booking became a CRM person and a note the moment it happened. Now the lead resolver reads three days of leads, bookings, chat intros, calls and signed agreements and makes sure each one is exactly one person, one company and one deal with a source, a referrer and an owner. The new deal lands at booked call, owned by the sales lead who took the booking, with one CRM task. All day, the capture, the sync, the output checks and the two connectors kept the store current and the routines honest.'}
+];
+
+
+/* ---------- build it yourself: steps per node, and the order to build the whole thing ---------- */
+var BUILD = {
+r_calls:{steps:['Give the routine read access to your call recorder and your calendar. The calendar is how it tells a client call from a personal one.','Write the skip rules first: personal calls, duplicates, anything titled not for the store, health remarks. Put them in a playbook file the routine reads every run.','Have it write plain text, one file per call, split when long, and one index row per file. Weak matches go to a review folder, never the main folder.','Schedule it early (06:00) so the transcripts exist before the extraction feed runs at 07:20.','Add an output check: a transcript file by 09:30, or a message to you.'],
+ hindsight:'Fetch transcripts on the server side. Moving them through the automation platform as encoded text is why a run takes 18 minutes.'},
+r_labeler:{steps:['Choose one label in your mail client that means \'belongs in the store\' and one that means \'already filed\'.','Give the routine read and label rights only. It must never open a thread or remove a label.','Write the rule for borderline threads: label them. A missed real thread costs more than a stray one.','Schedule it 30 minutes before the feed that files the threads.','Spot-check for a week: count the threads it labeled against the ones you would have.'],
+ hindsight:'Keep the deciding and the moving apart. The AI decides from sender, subject and snippet; a plain feed does the filing. Each is easy to test alone.'},
+r_ticket:{steps:['List your sources: chats, email, meeting notes, transcripts, onboarding events. Point the routine at the store copies, not the live systems.','Define the four outputs: new ticket, update, close, nudge. Each is a draft with a reason and a source.','Write every draft to one queue file per run. Nothing goes to the tracker until a human taps.','Run it twice a day: morning for the overnight, evening for the day including the noon meeting.','Add the commitment resolver once the commitments list exists: merge duplicates, close with proof, write status changes to a file the build job applies.'],
+ hindsight:'Once drafts were files, the morning run could put buttons on them and the output check could confirm the run happened.'},
+r_privacy:{steps:['Write the rulebook before the routine: what is redacted on sight (credentials, patient names), what gets a question card, what is left alone.','Give the redaction its own build job with undo. The routine proposes, the job applies, and you have 24 hours to reverse.','Cap the questions: five cards a day, buttons on each, answers stored where the routine reads them next run.','End every run with a heartbeat line, and have the bot check for it by a deadline.','Feed the secret scan\'s failures into it so a leaked key is handled the same morning.'],
+ hindsight:'Start it in week one. The scan found a pasted API key within hours. A store without it would have carried that key for days.'},
+r_errorwatch:{steps:['Get read access to your automation platform\'s execution log by API.','Define a silent failure: a run that succeeded but wrote nothing. Check the store for the commit, not the platform for the green tick.','Keep a checkpoint so each run looks only at new executions.','Write a ledger row per finding, with the fix applied or proposed.','Let it fix only what the playbook allows (safe re-runs). Everything else is a message to you.'],
+ hindsight:'The platform\'s own alert emails went to a different address, so the bot\'s 10-minute poll became the real alarm. Build the poll first.'},
+r_msa:{steps:['Decide the three sources of a signed agreement: the contracts folder, e-signature notices, forwarded PDFs.','Fix a file naming convention and a log that dedupes on message id, so a document is never billed twice.','Write the clean path: save the PDF, set the CRM stage, email accounting the exact invoice, update the billing sheet, post one line to sales.','Write the unclear path: a draft and one message with a button. Never guess on money.','Run it twice a day. A signature at 15:00 is billed at 16:00.'],
+ hindsight:'The dedupe log came after the first double. Build the log before the first run.'},
+r_sync:{steps:['Pick the one meeting the company runs on and write its run sheet by hand twice, so you know the shape.','Point the routine at onboarding events, tickets, CRM stages and the chat capture.','Rank rows by a stated rule (onboarding first) and carry yesterday\'s asks forward with a grade: answered, repeat, silent.','Write two copies: one internal, one the team can open.','Reply to it. The routine keeps the session open so you can re-rank by chat.'],
+ hindsight:'The grading of carried asks is the part the team notices. An ask silent three days running is the earliest churn signal you have.'},
+r_outreach:{steps:['Define inbound outreach by exclusion: not clients, not partners, not the team.','Let it research the sender on the web and write a one-paragraph brief with a fit rating against a written list of what you sell.','Save the reply as a draft and label the thread so it is not triaged twice.','Put a note on the CRM record so the history is where sales will look.','Route the draft into the morning run\'s buttons.'],
+ hindsight:'Rating fit against a written list saves you reading the pitch. Most of them are a low fit and a four-question reply.'},
+r_coo:{steps:['Write the registry first: every job, its time, its expected output. The run checks the registry, not its memory.','Make every other routine leave a file. The morning run reads files, never live systems.','Collect drafts from the queue folder and the mail drafts, screen for leaks and invented dates, rank by money and client impact.','Send one top message plus at most five items with Send, Hold and Skip buttons.','Wire the bot to fire the run again on a tap, with the item and the action in the payload, and have it send or file in the original channel.'],
+ hindsight:'The run ignored replies for its first two weeks. The tap relay is what turned a report into an operator.'},
+r_sourcing:{steps:['Make one log with five tabs: requests, products, pharmacy offers, outreach, client quotes. Everything the desk knows lives there.','Teach it where price files live and to check them before emailing anyone.','Fix outreach days (Monday and Thursday) so suppliers get one email, not five.','Record every reply with the days it took.','Draft one reply per client with yes or no and an indicative price. Hold anything ambiguous.'],
+ hindsight:'Supplier replies still reach the log by hand. Ingest them automatically and merge this desk with the weekly pricing scan; they overlap.'},
+r_keyacct:{steps:['Start from your own last posted update. The routine rewrites sections; it does not invent a format.','Point it at that account\'s chats, notes and calls since the last update.','End every section with what the account owes you.','Write the draft to the queue and send it to you. Never let it post.','Post it yourself, edited, for the first week. Then decide whether it earns a button.'],
+ hindsight:'This is the template for a per-client status card. Build it for one account first, then generalise.'},
+r_lead:{steps:['Decide the one rule for ownership: first-call host, then evidence, then rotation.','Make the routine idempotent: one person, one company, one deal per lead, and merge clear duplicates.','Keep stages in line with evidence only. A signed stage needs a signed PDF.','Write an audit file of every change and leave one task per deal to its owner, capped per run.','Run once a day in the evening with a three-day lookback. Add a weekly sweep of quiet deals.'],
+ hindsight:'Three runs a day created churn in the CRM. One careful evening run with a longer lookback is calmer and catches the same leads.'},
+r_audit:{steps:['List the invariants: every meeting note has a copy and an index row, every feed ran, counts match between the drive and the store.','Make it read-only. It reports; it never fixes.','Lead with what is broken, then the counts.','Schedule it before the week\'s first morning run.','Keep the health note in the store so trends are visible.'],
+ hindsight:'It found a restricted file re-filed into an open folder. Audits catch what the daily checks assume.'},
+r_pricing:{steps:['Keep one master pricing database and never let the routine edit it.','Have it save new price files to one folder and log new products in a dated additions sheet.','Compare per unit against your reference list.','Email a digest only when something is new.','Review additions by hand before they reach the master.'],
+ hindsight:'Weekly is right for pricing. Daily would mean emailing suppliers who have not replied yet.'},
+m_chatdigest:{steps:['Write the digest builder as a build job in the store.','Trigger it from a feed at a fixed minute. Build jobs\' own schedules run late.','Keep the feed to two steps: dispatch, done.'],
+ hindsight:'It failed two days running once and was one failure from being auto-disabled. Put a failure count in the error watch.'},
+m_notes:{steps:['Use a seen-list so a note is taken once.','Wait until a note has been unchanged for 30 minutes; notes get edited after the meeting.','Convert to markdown and write the file plus an index row.','Run three times a day so the afternoon\'s meetings land the same day.','Route uncertain notes to a review folder.'],
+ hindsight:'The 16:45 run exists because the noon meeting\'s notes land between 14:30 and 16:00. Time feeds by when sources finish, not by the hour.'},
+m_notes_shared:{steps:['Same steps as the notes feed, over files shared with you.','Offset it five minutes so the two never write at once.','Weekdays only; shared notes are work notes.'],
+ hindsight:'Two near-identical feeds is one too many. Fold them when you consolidate runtimes.'},
+m_emails:{steps:['Search by label, not by time window.','Fold a thread into one file, write it and an index row, then mark the thread done.','Treat an \'already exists\' response as done so a retry cannot duplicate.','Alert on other errors and let the thread retry next run.'],
+ hindsight:'The two-label scheme (to file, filed) is the whole dedupe. Keep it that simple.'},
+m_commit_push:{steps:['Have the build job write a push digest file: overdue or due within 48 hours, high confidence only.','Start the build, wait, read the file, send it if it has items.','Send it to the person who can act.'],
+ hindsight:'Nudges go to one person only. The next version sends each owner their own list with a one-tap done.'},
+m_transcript_inbox:{steps:['Keep a manual drop folder for anything the automatic pull misses.','Process, index, move to a processed folder.','Expect it to be idle. That is fine.'],
+ hindsight:'Keep a manual path for every automatic feed. You will need it the day an API changes.'},
+m_crm_notes:{steps:['Start the build so the meeting list is fresh.','Keep a seen-list; one note per meeting.','Match company by linked record, then name or domain, then the person\'s email, then your own record.','Keep the alias list in one place and make the feed read it.'],
+ hindsight:'The alias sentence drifted from the master list once and notes landed on the wrong company. One alias list, read by everything.'},
+m_commitments:{steps:['Give extraction a fixed schema: who, promised what, to whom, by when, source, confidence.','Write one file per commitment into the store. Files merge and dedupe; a spreadsheet does not.','Let the build job produce the lists that count.','Skip seen sources.'],
+ hindsight:'The first version wrote to a spreadsheet. Moving rows into the store is what made the resolver and the nudge possible.'},
+m_reports:{steps:['Search for the accounting system\'s notification emails.','Save every attachment plus a metadata file into a dated raw folder.','Dispatch a conversion job. Treat an existing path as already filed.'],
+ hindsight:'Raw first, convert second. You can re-run a conversion; you cannot re-fetch a deleted email.'},
+m_overdue:{steps:['Read the converted reports from the store, not the accounting system.','Send one message a day, in the afternoon after the reports land.'],
+ hindsight:'The reminder is only as fresh as the 14:00 feed. Time it after.'},
+m_kickoff:{steps:['Give the portal a webhook and write one JSON file per event.','Alert on error, retry on the next event.','Let the agenda and the ticket drafter read the files.'],
+ hindsight:'Events are the first input for client records. Write them from day one, even before anything reads them.'},
+m_bookings:{steps:['On each booking, find or create the CRM person and company.','Write a note whose host line names who took the call. The lead resolver turns that into ownership.','Keep a datastore of bookings seen.'],
+ hindsight:'Ownership from the host line settled the \'whose lead is this\' question without a meeting.'},
+m_indexrows:{steps:['Keep a queue datastore for rows added by hand.','Flush on demand, one JSON file per row, delete on success.'],
+ hindsight:'Rarely used, worth keeping. A manual row is how you fix a miss.'},
+m_tools:{steps:['Wrap each write the connectors cannot do as a single-purpose scenario with one input and one output.','Name them by what they do, not by the platform.','Retire each one as the write connector covers its path.'],
+ hindsight:'Four of them were replaced by the write connector in one afternoon. Treat tools as scaffolding.'},
+g_build:{steps:['Make one job the only writer of the index and the lists. Everything else writes rows.','Run on push and on dispatch, with a short fallback schedule.','Tag rows (kind, series, sensitivity, scope) from one tags file.','Apply queued updates, such as commitment status changes, in the same run.','End with the client records so they are never stale.'],
+ hindsight:'Search by product words failed until the build wrote note text into a details file. Index what people search for, not only titles.'},
+g_chatdigest:{steps:['Group yesterday\'s captured messages by chat.','One file, one index row, skip empty days.'],
+ hindsight:'A digest per day is what the extraction feed and the ticket drafter actually read. The raw capture is for search.'},
+g_reports:{steps:['Keep the decryption key in the job\'s secrets, never in the store.','Convert every spreadsheet and PDF to markdown and CSV.','One index row per report.'],
+ hindsight:'Converted reports are what the overdue reminder reads. Without conversion the accounting feed is a pile of attachments.'},
+g_redact:{steps:['Five operations: redact, restrict, undo, heartbeat, rule.','Redo from a fresh main branch on every retry so two redactions cannot collide.','Take the payload from the scan; never decide on its own.'],
+ hindsight:'It failed twice one morning and landed on the third try. Retries are the feature.'},
+g_secret:{steps:['Turn on a credential scanner over every push on day one.','Route failures to a person and to the privacy scan.'],
+ hindsight:'Fourteen red runs in one evening traced to one pasted key. The scan is cheap; the leak is not.'},
+g_clients:{steps:['Write a one-page brief: the fields a record has and where each comes from.','Build from store files only, by exact or alias match. Unmatched goes to a list, never guessed.','Copy hand-written lines through untouched.','Make it idempotent and run it at the end of every index build.'],
+ hindsight:'This should have been built first. Every routine was re-deriving who owns what from the index.'},
+b_capture:{steps:['One bot, one listener. Buffer messages on disk and commit in batches.','Redact credentials before the write.','Capture client direct messages but never answer them automatically.'],
+ hindsight:'Batches every 10 minutes, one file per day. Simple to check (last message time) and simple to digest.'},
+b_sync:{steps:['Pull the store on a timer into the bot\'s workspace.','Write a filtered index per access tier.','Trigger the output checks after each pull.'],
+ hindsight:'Tiered copies are how the bot answers principals without showing staff-only talk.'},
+b_checks:{steps:['Write a checks file: for each job, what file or row proves it ran, and by when.','Evaluate after every sync, only the checks whose deadline has passed.','Ask the platform log whether a missing output means idle or broken.','One message per missing item per day, and a status file that changes only when a status changes.'],
+ hindsight:'Config editable without a deploy is why new routines got covered the same day. One check was wrong for three days before anyone noticed; a weekly spot-check is next.'},
+b_erroralerts:{steps:['Poll the platform API every 10 minutes for failures, warnings, disabled scenarios, dead letters, credits and expiring connections.','One message per event, never a repeat.'],
+ hindsight:'This is the alarm; the morning error watch is the inquest. You need both.'},
+b_export:{steps:['Every night, save every scenario and tool definition into the store in one commit.','Strip sample data and secrets before writing.','Snapshot cloud routines after every edit; editors can rewrite tools and switches silently.'],
+ hindsight:'An editor save once changed a routine\'s allowed tools. Without the snapshot there was no way to see what changed.'},
+b_crm_person:{steps:['On the first message from a sender, create the CRM person with name, handle and chat id.','Check once per sender.'],
+ hindsight:'Leads were arriving by chat before the lead resolver existed. The person record made them findable later.'},
+b_buttons:{steps:['Put the item and the action in the button payload.','Accept replies to item messages and short text answers too.','Fire the routine\'s trigger; the bot itself never sends.'],
+ hindsight:'Keep the bot simple. The routine decides, the bot relays. Easier to audit.'},
+b_status:{steps:['Read the client record file and print a short header, counts and last contact.','Match slug, display name or alias, then a unique prefix.','Hide paths, chat ids and hand markers.','Owner only for the first week, then principals.'],
+ hindsight:'No AI call. The record was built by the index job; reading it back is instant and never wrong about what the file says.'},
+b_qa:{steps:['Tier the access: owner, principals. Each tier gets a filtered index.','Search, read the best matches, cite date, type and title.','Never answer clients or outside parties.'],
+ hindsight:'The store answers its builder well. Answering the team from stored answers only, with approval before anything reaches a client, is the next layer.'},
+x_read:{steps:['Expose search, get, list and status over the store as plain text.','Sign in with one owner account only.','Point every reading routine at it, so none decode repository API responses.'],
+ hindsight:'Build this before the routines, not after. Eleven prompts had to change when it arrived.'},
+x_write:{steps:['List the writable paths. Everything else is refused on the server.','Require a checksum to replace. Create is free. Delete does not exist.','Mask card numbers and keys before writing.','Give it its own sign-in app and token, and connect it to routines only.','Keep the old tools as fallback for a few days.'],
+ hindsight:'The path list and the checksum are the safety. With them, eight routines write to the store and none can overwrite each other blind.'}
+};
+
+var STAGES = [
+ {title:'The store and the secret scan', nodes:['g_secret','g_build'],
+  what:'Create one private, versioned repository. Decide the folder per channel and the one file format: plain text with an index row. Turn on a credential scan over every push before the first file lands.',
+  hindsight:'This is the order it happened. The store was private and versioned from day one, which is why the rest could be built fast.'},
+ {title:'Capture, one channel at a time', nodes:['b_capture','b_crm_person','r_labeler','m_emails','m_notes','m_notes_shared','r_calls','m_transcript_inbox','m_bookings','m_kickoff','m_reports','m_chatdigest','g_chatdigest'],
+  what:'Start with the channel where most of the company talks (here, chat), then email, meeting notes, call transcripts, bookings, onboarding events and accounting reports. Each feed does one thing: get the source into the store with duplicates removed and credentials redacted. Keep a manual drop path beside every automatic one.',
+  hindsight:'Use the fewest runtimes you can. Most of the scheduled feeds here could be bot or build jobs instead of a paid automation platform, and transcripts should be fetched on the server rather than moved as encoded text.'},
+ {title:'The index, the commitments and the client records', nodes:['g_build','m_indexrows','m_commitments','g_clients','m_crm_notes','g_reports'],
+  what:'One build job turns rows into the index and the lists. Extract commitments into one file each. Then build one record per client from store files only, and make every later routine read that record.',
+  hindsight:'The client record came last, in week six. It should sit here, because every routine after it was re-deriving who owns what. Commitments started in a spreadsheet; go straight to files in the store.'},
+ {title:'The two doors', nodes:['x_read','x_write','m_tools'],
+  what:'A read connector so routines get plain text, and a write connector with a fixed path list and a checksum on every replace. Every routine you build next reads and writes through these. Single-purpose automation tools cover the few writes the connectors cannot, and retire as the connectors grow.',
+  hindsight:'The connectors arrived in the final week, after the routines. Eleven prompts had to change. Build the doors before the people who walk through them.'},
+ {title:'Guardrails before operators', nodes:['b_sync','b_checks','b_erroralerts','b_export','r_errorwatch','r_privacy','g_redact','r_audit'],
+  what:'Output checks with a deadline per job. A 10-minute alarm over the automation platform and a morning inquest. Nightly snapshots of every automation and every routine. A daily privacy scan with its own undo. A weekly read-only audit.',
+  hindsight:'Output checks and snapshots came in the last two weeks, and the privacy scan was rebuilt once. Put them here so the first operating routine is watched from its first run.'},
+ {title:'Operate, with a human tap', nodes:['r_coo','b_buttons','r_ticket','r_msa','r_lead','r_sync','m_commit_push','m_overdue','r_outreach'],
+  what:'Write the registry of everything that runs. Then the morning run that checks it, collects every draft and sends five items with Send, Hold and Skip. Then the drafters and scanners that feed it: tickets, contracts, leads, the meeting agenda, nudges and reminders. Every one leaves a file; none sends to a client.',
+  hindsight:'The morning run ignored taps for two weeks, the lead resolver ran three times a day, and the ticket drafter had no queue file. Each got fixed the same way: make the output a file, then put a button on it.'},
+ {title:'Serve the team', nodes:['b_status','b_qa','r_keyacct','r_sourcing','r_pricing'],
+  what:'A status command that reads the client record back with no AI call. Questions and answers from the store, tiered by who is asking. One account\'s daily update as the template for a status card per client. The sourcing desk and the pricing scan for the questions clients ask most.',
+  hindsight:'This layer scores 4 of 10 and is what gets built next: a team tier that answers from stored answers only, product answers kept once, and the metrics layer.'}
+];
+var RULES = [
+ 'One job per routine, with a written playbook it reads every run.',
+ 'Every routine leaves a file the next one reads. The morning run reads files, never live systems.',
+ 'Nothing reaches a client without a human tap.',
+ 'Decide with AI, move with plain automation, and keep the two apart so each can be tested alone.',
+ 'The registry is the source of truth for what runs and when.',
+ 'Snapshot everything nightly, and routines after every edit.',
+ 'Keep a manual path beside every automatic feed.',
+ 'Time feeds by when their sources finish, not by the hour.'
+];
+
+/* ---------- helpers ---------- */
+var byId = {};
+NODES.forEach(function(n){ byId[n.id] = n; });
+var feedsOf = {}, readsOf = {};
+NODES.forEach(function(n){
+  (n.to || []).forEach(function(t){ if (byId[t]) { (readsOf[t] = readsOf[t] || []).push(n.id); } });
+  (n.reads || []).forEach(function(r){ if (byId[r]) { (feedsOf[r] = feedsOf[r] || []).push(n.id); } });
+});
+function uniq(arr){ var seen = {}, out = []; arr.forEach(function(x){ if (seen[x] !== true) { seen[x] = true; out.push(x); } }); return out; }
+function readsList(n){ return uniq((n.reads || []).concat(readsOf[n.id] || [])); }
+function feedsList(n){ return uniq((n.to || []).concat(feedsOf[n.id] || [])); }
+function related(id){
+  var n = byId[id], s = {};
+  readsList(n).forEach(function(x){ if (byId[x]) { s[x] = true; } });
+  feedsList(n).forEach(function(x){ if (byId[x]) { s[x] = true; } });
+  delete s[id];
+  return s;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function el(t, a){ var e = document.createElementNS(NS, t); if (a) { for (var k in a) { e.setAttribute(k, a[k]); } } return e; }
+function h(t, cls, html){ var e = document.createElement(t); if (cls) { e.className = cls; } if (html !== undefined) { e.innerHTML = html; } return e; }
+
+/* ---------- layout ---------- */
+var NS = 'http://www.w3.org/2000/svg';
+var svg = document.getElementById('svg');
+var g = el('g'); svg.appendChild(g);
+var gEdges = el('g'), gDeps = el('g'), gNodes = el('g');
+g.appendChild(gEdges); g.appendChild(gDeps); g.appendChild(gNodes);
+var ROW = 34, LEAFW = 300, HUBW = 210, LEAFX = 470, HUBX = 180;
+var pos = {};
+function layout(){
+  var right = NODES.filter(function(n){ return BRANCHES[n.b].side === 'right'; });
+  var left = NODES.filter(function(n){ return BRANCHES[n.b].side === 'left'; });
+  function stack(list, sign){
+    var groups = {};
+    list.forEach(function(n){ (groups[n.b] = groups[n.b] || []).push(n); });
+    var order = Object.keys(BRANCHES).filter(function(b){ return groups[b]; });
+    var total = 0;
+    order.forEach(function(b){ total += groups[b].length * ROW + 26; });
+    var y = -total / 2 + 13;
+    order.forEach(function(b){
+      var arr = groups[b], y0 = y;
+      arr.forEach(function(n, i){ pos[n.id] = {x: sign * LEAFX, y: y + i * ROW}; });
+      pos['hub_' + b] = {x: sign * HUBX, y: y0 + (arr.length - 1) * ROW / 2};
+      y += arr.length * ROW + 26;
+    });
+  }
+  stack(right, 1); stack(left, -1);
+}
+layout();
+function curve(x1, y1, x2, y2){ var mx = (x1 + x2) / 2; return 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2; }
+var edgeEls = {}, nodeEls = {}, depEls = [];
+function shortWhen(n){
+  if (n.days === 'instant') { return 'instant'; }
+  if (n.days === 'ondemand') { return 'on demand'; }
+  if (n.days === 'always') { return n.b === 'build' ? 'dispatch' : 'loop'; }
+  var t = n.times.join('/');
+  return t + (n.days === 'wkd' ? ' wkd' : n.days === 'weekly' ? ' Mon' : '');
+}
+function draw(){
+  var c = el('g', {'class':'center node', transform:'translate(0,0)'});
+  c.appendChild(el('circle', {r:48}));
+  var t1 = el('text', {'text-anchor':'middle', y:-3}); t1.textContent = 'EmbedCare';
+  var t2 = el('text', {'text-anchor':'middle', y:14}); t2.textContent = 'Brain';
+  var t3 = el('text', {'text-anchor':'middle', y:30, 'class':'s'}); t3.textContent = 'the store';
+  c.appendChild(t1); c.appendChild(t2); c.appendChild(t3);
+  c.addEventListener('click', function(ev){ ev.stopPropagation(); if (wasDrag()) { return; } openCenter(); });
+  gNodes.appendChild(c);
+  nodeEls.center = c;
+  Object.keys(BRANCHES).forEach(function(b){
+    var p = pos['hub_' + b]; if (p === undefined) { return; }
+    var col = BRANCHES[b].color, side = BRANCHES[b].side === 'right' ? 1 : -1;
+    gEdges.appendChild(el('path', {'class':'edge', d: curve(side * 48, 0, p.x - side * HUBW / 2, p.y), style:'stroke:' + col + ';stroke-width:2.4'}));
+    var hub = el('g', {'class':'node hub', transform:'translate(' + p.x + ',' + p.y + ')', 'data-id':'hub_' + b});
+    hub.appendChild(el('rect', {x:-HUBW / 2, y:-19, width:HUBW, height:38, style:'stroke:' + col}));
+    var tx = el('text', {x:-HUBW / 2 + 14, y:5, style:'fill:' + col}); tx.textContent = BRANCHES[b].short; hub.appendChild(tx);
+    var cnt = NODES.filter(function(n){ return n.b === b; }).length;
+    var tc = el('text', {'class':'cnt', x:HUBW / 2 - 10, y:5, 'text-anchor':'end'}); tc.textContent = cnt; hub.appendChild(tc);
+    hub.addEventListener('click', function(ev){ ev.stopPropagation(); if (wasDrag()) { return; } openHub(b); });
+    gNodes.appendChild(hub); nodeEls['hub_' + b] = hub;
+    NODES.filter(function(n){ return n.b === b; }).forEach(function(n){
+      var q = pos[n.id];
+      var e = el('path', {'class':'edge', d: curve(p.x + side * HUBW / 2, p.y, q.x - side * LEAFW / 2, q.y)});
+      gEdges.appendChild(e); edgeEls[n.id] = e;
+      var ng = el('g', {'class':'node leaf', transform:'translate(' + q.x + ',' + q.y + ')', 'data-id':n.id});
+      ng.appendChild(el('rect', {x:-LEAFW / 2, y:-14, width:LEAFW, height:28}));
+      ng.appendChild(el('circle', {'class':'dot', cx:-LEAFW / 2 + 13, cy:0, r:4.5, fill:col}));
+      var tn = el('text', {x:-LEAFW / 2 + 24, y:4.5}); tn.textContent = n.name; ng.appendChild(tn);
+      var tw = el('text', {'class':'when', x:LEAFW / 2 - 8, y:4, 'text-anchor':'end'}); tw.textContent = shortWhen(n); ng.appendChild(tw);
+      ng.addEventListener('click', function(ev){ ev.stopPropagation(); if (wasDrag()) { return; } select(n.id); });
+      gNodes.appendChild(ng); nodeEls[n.id] = ng;
+    });
+  });
+}
+function fitWhenText(){
+  Object.keys(nodeEls).forEach(function(k){
+    var gEl = nodeEls[k]; if (gEl.classList.contains('leaf') === false) { return; }
+    var ts = gEl.querySelectorAll('text'); var name = ts[0], when = ts[1];
+    var limit = LEAFW - 24 - 8 - when.getComputedTextLength() - 10; var s = name.textContent;
+    while (name.getComputedTextLength() > limit && s.length > 6) { s = s.slice(0, -2); name.textContent = s + '…'; }
+  });
+}
+draw();
+
+/* ---------- pan and zoom ---------- */
+/* A drag is only a drag after the pointer has moved more than a few pixels. Clicks are never swallowed
+   and the pointer is never captured, so a tap on a node always reaches the node. */
+var vb = {x:0, y:0, k:1}, map = document.getElementById('map');
+function apply(){ g.setAttribute('transform', 'translate(' + vb.x + ',' + vb.y + ') scale(' + vb.k + ')'); }
+function bounds(ids){
+  var xs = [], ys = [];
+  ids.forEach(function(id){ var p = pos[id]; if (p) { xs.push(p.x); ys.push(p.y); } });
+  if (xs.length === 0) { xs = [0]; ys = [0]; }
+  return {minX: Math.min.apply(null, xs) - LEAFW / 2 - 30, maxX: Math.max.apply(null, xs) + LEAFW / 2 + 30, minY: Math.min.apply(null, ys) - 50, maxY: Math.max.apply(null, ys) + 70};
+}
+function fitTo(b, kmax, kmin){
+  var W = map.clientWidth, H = map.clientHeight; if (W === 0 || H === 0) { return; }
+  var k = Math.min(W / (b.maxX - b.minX), H / (b.maxY - b.minY), kmax);
+  if (kmin !== undefined && k < kmin) { k = kmin; }
+  vb = {k: k, x: W / 2 - k * (b.minX + b.maxX) / 2, y: H / 2 - k * (b.minY + b.maxY) / 2};
+  apply();
+}
+function fit(){
+  var all = Object.keys(pos);
+  var b = bounds(all);
+  /* on a narrow screen, fit the height and let the reader pan sideways; the full width would be unreadable */
+  if (map.clientWidth < 700) {
+    var H = map.clientHeight, k = Math.min((H - 56) / (b.maxY - b.minY), 0.9);
+    if (k < 0.5) { k = 0.5; }
+    /* start with the centre near the left edge so the cloud routines branch is in view; the reader pans left for the rest.
+       The 56px leaves room for the hint box at the top. */
+    vb = {k: k, x: 70, y: 28 + (H - 56) / 2 - k * (b.minY + b.maxY) / 2};
+    apply();
+    return;
+  }
+  fitTo(b, 1.25);
+}
+var drag = null, dragging = false, lastDragEnd = 0;
+function wasDrag(){ return (Date.now() - lastDragEnd) < 150; }
+map.addEventListener('pointerdown', function(e){ if (e.button !== 0) { return; } if (e.pointerType === 'touch' && touches > 1) { return; } drag = {x:e.clientX, y:e.clientY, vx:vb.x, vy:vb.y}; dragging = false; });
+window.addEventListener('pointermove', function(e){
+  if (drag === null) { return; }
+  var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (dragging === false && Math.abs(dx) + Math.abs(dy) > 6) { dragging = true; map.classList.add('dragging'); }
+  if (dragging) { vb.x = drag.vx + dx; vb.y = drag.vy + dy; apply(); }
+});
+function endDrag(){ if (dragging) { lastDragEnd = Date.now(); } drag = null; dragging = false; map.classList.remove('dragging'); }
+window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
+map.addEventListener('wheel', function(e){
+  e.preventDefault(); var r = map.getBoundingClientRect(); var mx = e.clientX - r.left, my = e.clientY - r.top;
+  var f = Math.exp(-e.deltaY * 0.0015); zoomAt(mx, my, f);
+}, {passive:false});
+function zoomAt(mx, my, f){ var k2 = Math.min(3, Math.max(.25, vb.k * f)); vb.x = mx - (mx - vb.x) * (k2 / vb.k); vb.y = my - (my - vb.y) * (k2 / vb.k); vb.k = k2; apply(); }
+/* pinch zoom */
+var touches = 0, pinch = null;
+map.addEventListener('touchstart', function(e){ touches = e.touches.length; if (touches === 2) { drag = null; dragging = false; pinch = {d: dist(e.touches), k: vb.k, cx:(e.touches[0].clientX + e.touches[1].clientX) / 2, cy:(e.touches[0].clientY + e.touches[1].clientY) / 2}; } }, {passive:true});
+map.addEventListener('touchmove', function(e){ if (pinch && e.touches.length === 2) { e.preventDefault(); var r = map.getBoundingClientRect(); var d = dist(e.touches); var f = (d / pinch.d) * pinch.k / vb.k; zoomAt(pinch.cx - r.left, pinch.cy - r.top, f); } }, {passive:false});
+map.addEventListener('touchend', function(e){ touches = e.touches.length; if (touches < 2) { pinch = null; if (touches === 1) { lastDragEnd = Date.now(); } } }, {passive:true});
+function dist(t){ var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
+map.addEventListener('click', function(){ if (wasDrag()) { return; } if (document.body.classList.contains('view-tour')) { closePanel(); return; } clearSel(); closePanel(); });
+document.getElementById('fit').onclick = fit;
+document.getElementById('zin').onclick = function(){ zoomAt(map.clientWidth / 2, map.clientHeight / 2, 1.25); };
+document.getElementById('zout').onclick = function(){ zoomAt(map.clientWidth / 2, map.clientHeight / 2, 0.8); };
+window.addEventListener('resize', function(){ setNarrow(); if (document.body.classList.contains('view-tour')) { focusStep(); } else { fit(); } });
+function setNarrow(){ document.body.classList.toggle('narrow', window.innerWidth < 720); }
+setNarrow();
+
+/* ---------- selection and panel ---------- */
+var selected = null;
+function clearSel(){
+  selected = null;
+  Object.keys(nodeEls).forEach(function(k){ nodeEls[k].classList.remove('sel', 'dim', 'lit'); });
+  Object.keys(edgeEls).forEach(function(k){ edgeEls[k].classList.remove('on'); });
+  depEls.forEach(function(e){ e.parentNode && e.parentNode.removeChild(e); }); depEls.length = 0;
+  Array.prototype.forEach.call(document.querySelectorAll('.mark.sel'), function(m){ m.classList.remove('sel'); });
+  applyFilter();
+}
+function select(id){
+  clearSel(); selected = id; var n = byId[id]; var rel = related(id);
+  Object.keys(nodeEls).forEach(function(k){ var e = nodeEls[k]; if (k === id) { e.classList.add('sel'); } else if (rel[k] !== true && k.indexOf('hub_') !== 0 && k !== 'center') { e.classList.add('dim'); } });
+  if (edgeEls[id]) { edgeEls[id].classList.add('on'); }
+  var p = pos[id];
+  Object.keys(rel).forEach(function(r){ var q = pos[r]; if (q === undefined) { return; } var d = el('path', {'class':'edge dep on', d: curve(p.x, p.y, q.x, q.y)}); gDeps.appendChild(d); depEls.push(d); });
+  Array.prototype.forEach.call(document.querySelectorAll('.mark[data-id="' + id + '"]'), function(m){ m.classList.add('sel'); });
+  openPanel(n);
+}
+var panel = document.getElementById('panel'), pbody = document.getElementById('pbody');
+function bringPanelIntoView(){ if (document.body.classList.contains('narrow')) { var top = document.querySelector('main').getBoundingClientRect().top + window.pageYOffset; window.scrollTo(0, top); } }
+function closePanel(){ panel.classList.remove('open'); }
+document.querySelector('#panel .close').onclick = function(){ closePanel(); if (document.body.classList.contains('view-tour') === false) { clearSel(); } };
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closePanel(); if (document.body.classList.contains('view-tour') === false) { clearSel(); } } });
+function chip(x){
+  if (byId[x]) { return '<span class="chip link" data-go="' + x + '" style="border-color:' + BRANCHES[byId[x].b].color + '">' + esc(byId[x].name) + '</span>'; }
+  return '<span class="chip">' + esc(x) + '</span>';
+}
+function chipsOrNone(list){ return list.length ? list.map(chip).join('') : '<span class="chip">nothing yet</span>'; }
+function wireChips(){ Array.prototype.forEach.call(pbody.querySelectorAll('[data-go]'), function(c){ c.onclick = function(){ if (document.body.classList.contains('view-tour') === false && document.body.classList.contains('view-map') === false) { showView('map'); } select(c.getAttribute('data-go')); }; }); }
+function openPanel(n){
+  var b = BRANCHES[n.b];
+  pbody.innerHTML =
+    '<h3>' + esc(n.name) + '</h3>' +
+    '<div class="kind"><i style="background:' + b.color + '"></i>' + esc(b.name) + '</div>' +
+    '<dl class="facts"><dt>When it runs</dt><dd>' + esc(n.runs) + '</dd></dl>' +
+    '<h4>What it is</h4><p>' + esc(n.what) + '</p>' +
+    '<h4>What it does</h4><p>' + esc(n.does) + '</p>' +
+    '<h4>Reads from</h4><div class="chips">' + chipsOrNone(readsList(n)) + '</div>' +
+    '<h4>Feeds</h4><div class="chips">' + chipsOrNone(feedsList(n)) + '</div>' +
+    '<h4>Example output</h4><div class="out"><span class="lab">Illustrative. Roles stand in for names, and no real client, person or price appears.</span>' + esc(n.example) + '</div>' +
+    buildSection(n.id);
+  panel.classList.add('open'); panel.scrollTop = 0;
+  wireChips(); bringPanelIntoView();
+}
+function buildSection(id){
+  var bd = BUILD[id]; if (bd === undefined) { return ''; }
+  return '<h4>Build it yourself</h4><ol class="steps">' + bd.steps.map(function(st){ return '<li>' + esc(st) + '</li>'; }).join('') + '</ol>' +
+    '<h4>In hindsight</h4><p class="hind">' + esc(bd.hindsight) + '</p>';
+}
+function openHub(b){
+  clearSel();
+  Object.keys(nodeEls).forEach(function(k){ var e = nodeEls[k]; if (k !== 'hub_' + b && k !== 'center' && (byId[k] === undefined || byId[k].b !== b)) { e.classList.add('dim'); } });
+  var list = NODES.filter(function(n){ return n.b === b; });
+  pbody.innerHTML = '<h3>' + esc(BRANCHES[b].name) + '</h3><div class="kind"><i style="background:' + BRANCHES[b].color + '"></i>' + list.length + ' items</div><p>' + esc(BRANCHES[b].note) + '</p><h4>Items</h4><div class="chips">' + list.map(function(n){ return chip(n.id); }).join('') + '</div>';
+  panel.classList.add('open'); panel.scrollTop = 0; wireChips(); bringPanelIntoView();
+}
+function openCenter(){
+  clearSel();
+  pbody.innerHTML = '<h3>The store</h3><div class="kind"><i style="background:var(--c-center)"></i>the middle of the map</div>' +
+    '<p>One private, versioned repository. Every email thread, meeting note, call transcript, chat message, accounting report, onboarding event and booking is written into it as a plain text file, with duplicates removed and credentials redacted before the write.</p>' +
+    '<p>A build job turns those files into an index, a commitments list (every promise anyone made, with a due date) and one record per client. The routines read those, do their one job, and leave a file the next one reads.</p>' +
+    '<h4>Branches</h4><div class="chips">' + Object.keys(BRANCHES).map(function(b){ return '<span class="chip link" data-hub="' + b + '" style="border-color:' + BRANCHES[b].color + '">' + esc(BRANCHES[b].short) + '</span>'; }).join('') + '</div>';
+  panel.classList.add('open'); panel.scrollTop = 0; bringPanelIntoView();
+  Array.prototype.forEach.call(pbody.querySelectorAll('[data-hub]'), function(c){ c.onclick = function(){ openHub(c.getAttribute('data-hub')); }; });
+}
+
+/* ---------- legend, filter, search ---------- */
+var legend = document.getElementById('legend'), hidden = {};
+Object.keys(BRANCHES).forEach(function(k){
+  var b = BRANCHES[k]; var bt = document.createElement('button');
+  bt.innerHTML = '<i style="background:' + b.color + '"></i>' + esc(b.short) + ' <span style="color:var(--muted)">' + NODES.filter(function(n){ return n.b === k; }).length + '</span>';
+  bt.setAttribute('aria-pressed', 'true');
+  bt.onclick = function(){ if (hidden[k]) { delete hidden[k]; } else { hidden[k] = true; } bt.classList.toggle('off'); bt.setAttribute('aria-pressed', hidden[k] ? 'false' : 'true'); applyFilter(); };
+  legend.appendChild(bt);
+});
+var q = document.getElementById('q');
+q.addEventListener('input', function(){ if (document.body.classList.contains('view-map') === false) { showView('map'); } applyFilter(); });
+function applyFilter(){
+  if (document.body.classList.contains('view-tour')) { return; }
+  var s = q.value.trim().toLowerCase();
+  Object.keys(nodeEls).forEach(function(k){
+    var e = nodeEls[k];
+    if (k === 'center') { return; }
+    if (k.indexOf('hub_') === 0) { e.classList.toggle('dim', hidden[k.slice(4)] === true); return; }
+    var n = byId[k];
+    var hit = (s === '') || (n.name + ' ' + n.what + ' ' + n.does + ' ' + n.when + ' ' + n.example).toLowerCase().indexOf(s) >= 0;
+    if (selected !== null && s === '') { return; }
+    e.classList.toggle('dim', hidden[n.b] === true || hit === false);
+  });
+}
+
+/* ---------- theme ---------- */
+document.getElementById('theme').onclick = function(){
+  var r = document.documentElement; var cur = r.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  var next = cur === 'dark' ? 'light' : 'dark'; r.setAttribute('data-theme', next);
+  try { localStorage.setItem('brain-theme', next); } catch (e) { }
+};
+
+/* ---------- views ---------- */
+var VIEWS = ['map', 'clock', 'tour', 'build', 'howto'];
+function showView(v){
+  VIEWS.forEach(function(x){ document.body.classList.toggle('view-' + x, x === v); });
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){ t.setAttribute('aria-selected', t.getAttribute('data-view') === v ? 'true' : 'false'); });
+  closePanel();
+  if (v === 'map') { clearSel(); requestAnimationFrame(fit); }
+  if (v === 'tour') { clearSel(); requestAnimationFrame(function(){ if (document.body.classList.contains('view-tour')) { renderStep(); } }); } else { stopPlay(); }
+}
+Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){ t.onclick = function(){ showView(t.getAttribute('data-view')); }; });
+
+/* ---------- day clock ---------- */
+function buildClock(){
+  var root = document.getElementById('tl'); var track = h('div', 'track'); root.appendChild(track);
+  var axis = h('div', 'tl-axis');
+  for (var hr = 0; hr <= 24; hr += 2) { var s = h('span'); s.style.left = (hr / 24 * 100) + '%'; s.textContent = String(hr).padStart(2, '0') + ':00'; axis.appendChild(s); var tk = h('span', 'tick'); tk.style.left = (hr / 24 * 100) + '%'; axis.appendChild(tk); }
+  track.appendChild(axis);
+  var TLTOP = 24, laneH = 48;
+  var lanes = [{k:'cloud', label:'Cloud routines'}, {k:'feed', label:'Automation feeds'}, {k:'weekly', label:'Weekly (Mondays)'}];
+  lanes.forEach(function(ln, i){ var d = h('div', 'tl-lane'); d.style.top = (TLTOP + i * laneH) + 'px'; var b = h('b'); b.textContent = ln.label; d.appendChild(b); track.appendChild(d); });
+  var items = [];
+  NODES.forEach(function(n){ n.times.forEach(function(t){ items.push({n:n, t:t}); }); });
+  items.sort(function(a, b){ return a.t < b.t ? -1 : a.t > b.t ? 1 : 0; });
+  var lastX = [-9, -9, -9], bump = [0, 0, 0];
+  items.forEach(function(it){
+    var n = it.n, t = it.t;
+    var lane = n.days === 'weekly' ? 2 : (n.b === 'cloud' ? 0 : 1);
+    var parts = t.split(':'); var xp = (Number(parts[0]) + Number(parts[1]) / 60) / 24 * 100;
+    if (xp - lastX[lane] < 1.9) { bump[lane] = bump[lane] === 0 ? 1 : (bump[lane] === 1 ? 2 : 0); } else { bump[lane] = 0; }
+    lastX[lane] = xp;
+    var m = h('div', 'mark' + (n.days === 'weekly' ? ' weekly' : ''));
+    m.style.left = xp + '%'; m.style.top = (TLTOP + lane * laneH + 6 + bump[lane] * 13) + 'px'; m.style.background = BRANCHES[n.b].color;
+    m.title = n.name + ' (' + t + (n.days === 'wkd' ? ', weekdays' : n.days === 'weekly' ? ', Mondays' : ', daily') + ')';
+    m.setAttribute('data-id', n.id); m.setAttribute('role', 'button'); m.setAttribute('aria-label', m.title); m.tabIndex = 0;
+    m.onclick = function(e){ e.stopPropagation(); select(n.id); };
+    m.onkeydown = function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(n.id); } };
+    track.appendChild(m);
+  });
+  var note = document.getElementById('clocknote');
+  note.innerHTML = '<span><i style="background:var(--c-cloud)"></i>Cloud routine</span><span><i style="background:var(--c-feed)"></i>Automation feed</span><span><i class="sq" style="background:var(--c-cloud)"></i>Weekly</span><span>Stacked dots share a minute. Times are local to the company.</span>';
+  var cards = document.getElementById('clockcards');
+  var loops = NODES.filter(function(n){ return n.times.length === 0; });
+  var groups = {instant:'Instant, on an event', ondemand:'On demand', always:'All day'};
+  Object.keys(groups).forEach(function(k){
+    var list = loops.filter(function(n){ return n.days === k; }); if (list.length === 0) { return; }
+    var c = h('div', 'card'); c.innerHTML = '<h3>' + groups[k] + '</h3><div class="chips" style="margin-top:6px">' + list.map(function(n){ return chip(n.id); }).join('') + '</div>';
+    cards.appendChild(c);
+  });
+  var first = h('div', 'card'); first.innerHTML = '<h3>The shape of the day</h3><p><span class="t">06:00</span> capture and transcripts, <span class="t">06:15 to 07:20</span> filing and extraction, <span class="t">07:30 to 08:53</span> drafting, scanning, checking and preparing, <span class="t">09:00</span> the five drafts on Nate\'s phone, <span class="t">14:00</span> accounting, <span class="t">16:00 to 18:00</span> the afternoon pass, <span class="t">19:30</span> the CRM made honest.</p>';
+  cards.insertBefore(first, cards.firstChild);
+  Array.prototype.forEach.call(cards.querySelectorAll('[data-go]'), function(c){ c.onclick = function(){ select(c.getAttribute('data-go')); }; });
+}
+buildClock();
+
+/* ---------- tour ---------- */
+var step = 0, playTimer = null;
+var story = document.getElementById('story');
+function renderStep(){
+  var s = TOUR[step];
+  story.innerHTML =
+    '<div class="meta"><span class="time">' + esc(s.time) + '</span><span>Step ' + (step + 1) + ' of ' + TOUR.length + '</span></div>' +
+    '<h3>' + esc(s.title) + '</h3>' +
+    '<p>' + esc(s.text) + '</p>' +
+    '<div class="nodes">' + s.nodes.map(chip).join('') + '</div>' +
+    '<div class="nav"><button class="btn" id="tback"' + (step === 0 ? ' disabled' : '') + '>Back</button><button class="btn" id="tnext">' + (step === TOUR.length - 1 ? 'Start over' : 'Next') + '</button><button class="btn" id="tplay" aria-pressed="' + (playTimer ? 'true' : 'false') + '">' + (playTimer ? 'Pause' : 'Play') + '</button><span class="spacer"></span><span class="dots" id="tdots">' + TOUR.map(function(x, i){ return '<i class="' + (i === step ? 'on' : i < step ? 'done' : '') + '" data-i="' + i + '"></i>'; }).join('') + '</span></div>';
+  document.getElementById('tback').onclick = function(){ stopPlay(); go(step - 1); };
+  document.getElementById('tnext').onclick = function(){ stopPlay(); go(step + 1); };
+  document.getElementById('tplay').onclick = function(){ if (playTimer) { stopPlay(); renderStep(); } else { startPlay(); } };
+  Array.prototype.forEach.call(story.querySelectorAll('.dots i'), function(d){ d.onclick = function(){ stopPlay(); go(Number(d.getAttribute('data-i'))); }; });
+  Array.prototype.forEach.call(story.querySelectorAll('[data-go]'), function(c){ c.onclick = function(){ select(c.getAttribute('data-go')); highlight(TOUR[step].nodes, c.getAttribute('data-go')); }; });
+  highlight(s.nodes);
+  focusStep();
+}
+function highlight(ids, keepSel){
+  var on = {}; ids.forEach(function(i){ on[i] = true; });
+  Object.keys(nodeEls).forEach(function(k){ var e = nodeEls[k]; if (k === 'center') { return; } if (keepSel === undefined || k !== keepSel) { e.classList.remove('sel'); } e.classList.toggle('lit', on[k] === true && k !== keepSel); e.classList.toggle('dim', on[k] !== true && k.indexOf('hub_') !== 0); });
+  Object.keys(edgeEls).forEach(function(k){ edgeEls[k].classList.toggle('on', on[k] === true); });
+  if (keepSel === undefined) { depEls.forEach(function(e){ e.parentNode && e.parentNode.removeChild(e); }); depEls.length = 0; }
+}
+function focusStep(){
+  var ids = TOUR[step].nodes.slice(); ids.push('center');
+  var b = bounds(ids);
+  /* keep the whole story readable: never zoom past 1.1, never below the size where labels blur */
+  var narrow = map.clientWidth < 700;
+  var H = map.clientHeight - (narrow ? 24 : 220); if (H < 160) { H = 160; }
+  var W = map.clientWidth;
+  var k = Math.min(W / (b.maxX - b.minX), H / (b.maxY - b.minY), 1.1);
+  if (k < (narrow ? 0.28 : 0.5)) { k = narrow ? 0.28 : 0.5; }
+  vb = {k: k, x: W / 2 - k * (b.minX + b.maxX) / 2, y: (narrow ? 12 : 10) + H / 2 - k * (b.minY + b.maxY) / 2};
+  apply();
+}
+function go(i){ step = (i + TOUR.length) % TOUR.length; closePanel(); renderStep(); if (document.body.classList.contains('narrow')) { var top = map.getBoundingClientRect().top + window.pageYOffset; window.scrollTo(0, top); } }
+function startPlay(){ stopPlay(); playTimer = setInterval(function(){ go(step + 1); }, 7000); renderStep(); }
+function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } }
+
+/* ---------- build view ---------- */
+function buildBuild(){
+  var L = document.getElementById('build-left'), R = document.getElementById('build-right');
+  var counts = {}; NODES.forEach(function(n){ counts[n.b] = (counts[n.b] || 0) + 1; });
+  L.innerHTML =
+    '<h2>How it is built</h2>' +
+    '<h3>Four layers</h3><div class="layers">' +
+    '<div class="layer"><div class="n">1</div><div><b>Capture</b><p>Every channel is written into the store automatically: email, meeting notes, call transcripts, Telegram, accounting reports, onboarding portal events and calendar bookings. Duplicates removed, credentials redacted, and a secret scan on every change.</p></div></div>' +
+    '<div class="layer"><div class="n">2</div><div><b>Index and records</b><p>A build job turns the raw files into an index, a commitments list (every promise anyone made, with a due date) and one record per client with status, owner, dates, open asks and last contact.</p></div></div>' +
+    '<div class="layer"><div class="n">3</div><div><b>Operate</b><p>About forty scheduled routines and jobs on a day clock from 06:00 to 19:30. Each has one job. Each leaves a file the next one reads.</p></div></div>' +
+    '<div class="layer"><div class="n">4</div><div><b>Guardrails</b><p>Output checks confirm each job left its output by its deadline. An error watch covers the automation platform. A privacy scan runs daily. Nightly snapshots of every routine and automation mean any change can be rolled back. A shared lessons file records what has gone wrong. The morning run, the error watch and the weekly audit read it first. The other routines do not read it yet.</p></div></div>' +
+    '</div>' +
+    '<h3>Five runtimes</h3><div class="runtimes">' +
+    '<div class="rt"><i style="background:var(--c-cloud)"></i><div><b>Cloud AI routines</b> <span>on a schedule. ' + counts.cloud + ' on this map. Each one is a Claude session with a written playbook and a short list of tools.</span></div></div>' +
+    '<div class="rt"><i style="background:var(--c-feed)"></i><div><b>A no-code automation platform</b> <span>for the feeds. ' + counts.feed + ' scenarios and tool sets. They move files from email, the shared drive and webhooks into the store.</span></div></div>' +
+    '<div class="rt"><i style="background:var(--c-build)"></i><div><b>GitHub Actions</b> <span>for the build jobs. ' + counts.build + ' jobs. The index build runs on every push and on a 15-minute fallback schedule.</span></div></div>' +
+    '<div class="rt"><i style="background:var(--c-bot)"></i><div><b>An always-on Telegram bot</b> <span>with ' + counts.bot + ' loops and commands. It captures chats, syncs the store, checks outputs, relays taps and answers questions.</span></div></div>' +
+    '<div class="rt"><i style="background:var(--c-conn)"></i><div><b>Two small connectors</b> <span>(read and write) that give the routines a safe door into the store, with a fixed list of writable paths and a checksum on every replace.</span></div></div>' +
+    '</div>' +
+    '<h3>The rule</h3><div class="rule"><b>Nothing reaches a client without a human tap.</b><p>Filing, indexing, CRM upkeep and invoice instructions to the company\'s own accounting team run on their own. Any message to a client or partner, any ticket, any post to a group chat is a draft until Nate taps Send on his phone. Hold keeps it. Skip drops it. Every tap is recorded.</p></div>' +
+    '<h3>The numbers</h3><div class="nums">' +
+    '<div class="num"><b>' + NODES.length + '</b><span>routines, feeds, jobs and loops on this map</span></div>' +
+    '<div class="num"><b>' + esc(STATS.items) + '</b><span>items indexed since late July 2026</span></div>' +
+    '<div class="num"><b>' + esc(STATS.messages7d) + '</b><span>Telegram messages captured in the last 7 days, across ' + esc(STATS.chats7d) + ' chats</span></div>' +
+    '<div class="num"><b>' + esc(STATS.commitments) + '</b><span>commitments tracked, each with an owner and a due date</span></div>' +
+    '<div class="num"><b>6</b><span>weeks to build the first version</span></div>' +
+    '</div>';
+  R.innerHTML =
+    '<h2>What it is not yet</h2>' +
+    '<p>Nate\'s own scoring, from the architecture review of 2026-10-09. The system is strong where it gathers and weaker where it serves people other than its builder.</p>' +
+    '<div class="scores">' +
+    score('Capture', 9, 'Every channel lands in one versioned store with dedupe, redaction, secret scanning and snapshots. Few companies this size have a single source of truth this complete.', 'var(--good)') +
+    score('Operate', 7, 'Real work leaves the system every day: drafts, tickets, billing instructions, a clean CRM. But every approval still goes through one person, and nothing yet reports cycle times.', 'var(--mid)') +
+    score('Serve', 4, 'The system answers Nate. It does not yet answer the account managers, the sales lead or a client. Every question clients and partners ask in chat is still answered by a person.', 'var(--low)') +
+    '</div>' +
+    '<h3>Against the six goals</h3>' +
+    '<table class="goals"><tr><th>Goal</th><th>Score</th><th>Evidence</th></tr>' +
+    '<tr><td>Overhead down</td><td class="v">8</td><td>One person runs about forty automations. The cost is five runtimes to look after.</td></tr>' +
+    '<tr><td>Efficiency high</td><td class="v">7</td><td>The morning pipeline lands by 09:00. The transcript pull still takes 18 minutes.</td></tr>' +
+    '<tr><td>Accuracy near perfect</td><td class="v">6</td><td>No accuracy measurement exists yet. Known misses in one week: a mislabeled thread, a check that was wrong for three days, 48 meeting notes parked in review.</td></tr>' +
+    '<tr><td>Account managers fetch and relay</td><td class="v">4</td><td>Account managers have no tool of their own yet. The client status command is the first one, owner-only for its first week.</td></tr>' +
+    '<tr><td>Sales close</td><td class="v">5</td><td>The CRM is clean and every lead has an owner. No pre-call brief, no post-call follow-up draft, no stale-deal nudge.</td></tr>' +
+    '<tr><td>Client needs into tech</td><td class="v">6</td><td>The ticket drafter and the onboarding feed work. Nothing closes the loop back to the client.</td></tr>' +
+    '</table>' +
+    '<h3>Still manual</h3><ul>' +
+    '<li>Every approval. One person taps every Send.</li>' +
+    '<li>Answering clients. The bot answers the owner and principals only, never a client.</li>' +
+    '<li>Measuring accuracy. There is no weekly spot-check yet.</li>' +
+    '<li>Promise nudges go to Nate alone. Nobody else sees their own list.</li>' +
+    '</ul>' +
+    '<h3>Being built next, in order</h3><div class="next">' +
+    '<div><b>Client records, finished</b>One record per client is now built from the store on every index build. Next, the routines write to it instead of re-deriving who owns what, and the status command opens to the team.</div>' +
+    '<div><b>Status answers for the team</b>A team tier that answers \'where is Client A\', \'do we carry this\' and \'what did we quote\' from stored answers only, with the account manager approving before anything reaches a client.</div>' +
+    '<div><b>The metrics layer</b>Ask to first reply, signed to live, overdue promises per owner, lead to first call. Computed from the store so they trend, instead of being counted by hand once.</div>' +
+    '</div>';
+}
+function score(label, v, text, color){
+  return '<div class="score"><div class="lab">' + label + '</div><div class="val">' + v + '<small> of 10</small></div><p>' + esc(text) + '</p><div class="bar"><i style="width:' + (v * 10) + '%;background:' + color + '"></i></div></div>';
+}
+buildBuild();
+
+function buildHowto(){
+  var root = document.getElementById('stages');
+  STAGES.forEach(function(st, i){
+    var d = h('div', 'stage');
+    d.innerHTML = '<div class="n">' + (i + 1) + '</div><h3>' + esc(st.title) + '</h3><p>' + esc(st.what) + '</p>' +
+      '<div class="chips">' + st.nodes.map(chip).join('') + '</div>' +
+      '<div class="hl">What Nate would do differently</div><p class="hind">' + esc(st.hindsight) + '</p>';
+    root.appendChild(d);
+  });
+  var r = document.getElementById('rules');
+  r.innerHTML = '<h3>Rules that held</h3><ul>' + RULES.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+  Array.prototype.forEach.call(document.querySelectorAll('#howto [data-go]'), function(c){ c.onclick = function(){ select(c.getAttribute('data-go')); }; });
+}
+buildHowto();
+
+/* ---------- start ---------- */
+fitWhenText();
+showView('map');
+/* The fit runs after the timeline and the build view exist, so the map has its final size. */
+requestAnimationFrame(function(){ if (document.body.classList.contains('view-map')) { fit(); } });
+window.addEventListener('load', function(){ if (document.body.classList.contains('view-map')) { fit(); } });
+</script>
+</body>
+</html>

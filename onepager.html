@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The EmbedCare Brain</title>
+<style>
+:root{--ink:#1b2430;--muted:#5d6b7a;--line:#d7dde5;--soft:#eef1f5;--accent:#2457c5;--accent-soft:#e6edfa;
+  --c-cloud:#2f6fdb;--c-feed:#e0802b;--c-build:#7a4fc9;--c-bot:#2d9a67;--c-conn:#1b9aa8;--good:#2d9a67;--mid:#e0802b;--low:#c74a4a}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;color:var(--ink);font:9pt/1.38 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1{font-size:21pt;margin:0;letter-spacing:-.015em;line-height:1.1}
+h2{font-size:8.2pt;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 5px;font-weight:650}
+p{margin:0}
+.top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:8px}
+.top .d{font-size:8.5pt;color:var(--muted)}
+.intro{font-size:9.8pt;line-height:1.42;margin-bottom:9px}
+.grid{display:grid;grid-template-columns:1.08fr 1fr;gap:14px}
+section{margin-bottom:9px}
+.layers{display:grid;gap:4px}
+.layer{display:grid;grid-template-columns:20px 1fr;gap:7px;border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+.layer .n{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:9pt;display:flex;align-items:center;justify-content:center}
+.layer b{font-size:9.6pt}
+.layer p{color:var(--muted);font-size:8.4pt;line-height:1.34}
+.day{border-left:2px solid var(--line);margin-left:4px}
+.day div{display:grid;grid-template-columns:94px 1fr;gap:4px;padding:1px 0 1px 9px;position:relative;font-size:8.6pt}
+.day div::before{content:"";position:absolute;left:-5px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--c-cloud)}
+.day div.f::before{background:var(--c-feed)}
+.day div.k::before{background:var(--accent);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--accent)}
+.day span{font-variant-numeric:tabular-nums;font-weight:650;white-space:nowrap}
+.day div.k{font-weight:600}
+.rule{background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:7px 10px}
+.rule b{display:block;font-size:10pt;margin-bottom:2px}
+.rule p{font-size:8.5pt}
+.rt{display:grid;gap:2px;font-size:8.5pt}
+.rt div{display:flex;gap:7px;align-items:flex-start}
+.rt i{flex:0 0 8px;height:8px;border-radius:50%;margin-top:4px}
+.rt span{color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.num{border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+.num b{display:block;font-size:13.5pt;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.num span{font-size:7.9pt;color:var(--muted);line-height:1.3;display:block}
+.scores{display:grid;gap:5px}
+.score{display:grid;grid-template-columns:1fr auto;gap:2px 10px;border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+.score .lab{font-weight:650}
+.score .val{font-size:14pt;font-weight:700;grid-row:span 2;align-self:center;font-variant-numeric:tabular-nums}
+.score .val small{font-size:8pt;color:var(--muted);font-weight:500}
+.score p{font-size:8.3pt;color:var(--muted);line-height:1.38}
+.bar{grid-column:1 / -1;height:4px;background:var(--soft);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%}
+ol.next{margin:0;padding-left:16px;font-size:8.5pt}
+ol.next li{margin-bottom:3px}
+ol.next b{font-weight:650}
+.foot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;display:flex;justify-content:space-between;gap:12px;font-size:8.2pt;color:var(--muted)}
+.foot a{color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap}.foot span:last-child{flex:0 0 auto}
+</style>
+</head>
+<body>
+<div class="top"><h1>The EmbedCare Brain</h1><span class="d">One-page summary, <span data-stat="asof_long">31 October 2026</span></span></div>
+<p class="intro">EmbedCare is a white-label telehealth platform. In about six weeks its president, Nate, built a system where every conversation the company has lands in one private, versioned store. Scheduled AI routines read that store and do the day's operating work: they file records, draft tickets and replies, bill signed contracts, keep the CRM current, prepare the daily meeting and watch for errors and privacy leaks. The few decisions that need a person reach Nate's phone with Send, Hold and Skip buttons.</p>
+
+<div class="grid">
+<div>
+  <section>
+    <h2>Four layers</h2>
+    <div class="layers">
+      <div class="layer"><div class="n">1</div><div><b>Capture</b><p>Email, meeting notes, call transcripts, Telegram, accounting reports, portal events and bookings land in the store automatically. Duplicates are removed, credentials redacted, and every change is scanned for secrets.</p></div></div>
+      <div class="layer"><div class="n">2</div><div><b>Index and records</b><p>A build job turns the raw files into an index, a list of every promise anyone made with its due date, and one record per client.</p></div></div>
+      <div class="layer"><div class="n">3</div><div><b>Operate</b><p>About forty scheduled routines and jobs on a day clock from 06:00 to 19:30. Each has one job and leaves a file the next one reads.</p></div></div>
+      <div class="layer"><div class="n">4</div><div><b>Guardrails</b><p>Output checks with a deadline per job, an error watch, a daily privacy scan, and nightly snapshots so any change can be rolled back.</p></div></div>
+    </div>
+  </section>
+  <section>
+    <h2>One ordinary weekday</h2>
+    <div class="day">
+      <div><span>06:00</span>Call transcripts and the chat digest filed</div>
+      <div class="f"><span>06:15 to 06:50</span>Email filed, index rebuilt, promises nudged</div>
+      <div class="f"><span>07:15 to 07:20</span>Meeting notes to the CRM, promises extracted</div>
+      <div><span>07:30 to 07:45</span>Ticket drafts, privacy scan, error check</div>
+      <div><span>08:00</span>A signed contract is billed, untouched by hand</div>
+      <div><span>08:30 to 08:53</span>Agenda built, pitches answered in draft</div>
+      <div class="k"><span>09:00</span>Five drafts reach Nate's phone</div>
+      <div class="f"><span>14:00 to 14:20</span>Accounting reports, overdue invoices</div>
+      <div><span>16:00 to 18:00</span>Contracts again, tickets, an account update</div>
+      <div><span>19:30</span>New leads become CRM deals with owners</div>
+    </div>
+  </section>
+  <section style="margin-bottom:0">
+    <div class="rule"><b>Nothing reaches a client without a human tap.</b><p>Filing, indexing, CRM upkeep and invoice instructions to the company's own accounting team run on their own. Every message to a client or partner stays a draft until Nate taps Send.</p></div>
+  </section>
+</div>
+
+<div>
+  <section>
+    <h2>The numbers</h2>
+    <div class="nums">
+      <div class="num"><b data-stat="nodes">45</b><span>routines, feeds, jobs and loops</span></div>
+      <div class="num"><b data-stat="items">1,000+</b><span>items indexed since late July 2026</span></div>
+      <div class="num"><b data-stat="messages7d">1,000+</b><span>Telegram messages captured in the last 7 days</span></div>
+      <div class="num"><b data-stat="commitments">500+</b><span>commitments tracked, each with an owner and a due date</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Five runtimes</h2>
+    <div class="rt">
+      <div><i style="background:var(--c-cloud)"></i><p><b>Cloud AI routines</b> <span>on a schedule, each with a written playbook</span></p></div>
+      <div><i style="background:var(--c-feed)"></i><p><b>A no-code automation platform</b> <span>for the feeds into the store</span></p></div>
+      <div><i style="background:var(--c-build)"></i><p><b>GitHub Actions</b> <span>that rebuild the index on every push</span></p></div>
+      <div><i style="background:var(--c-bot)"></i><p><b>An always-on Telegram bot</b> <span>for capture, checks and taps</span></p></div>
+      <div><i style="background:var(--c-conn)"></i><p><b>Two small connectors</b> <span>for reading and writing the store</span></p></div>
+    </div>
+  </section>
+  <section>
+    <h2>What it is not yet</h2>
+    <div class="scores">
+      <div class="score"><div class="lab">Capture</div><div class="val">9<small> of 10</small></div><p>Every channel lands in one versioned store, deduplicated, redacted and scanned.</p><div class="bar"><i style="width:90%;background:var(--good)"></i></div></div>
+      <div class="score"><div class="lab">Operate</div><div class="val">7<small> of 10</small></div><p>Real work ships daily, but every approval goes through one person and nothing measures cycle times yet.</p><div class="bar"><i style="width:70%;background:var(--mid)"></i></div></div>
+      <div class="score"><div class="lab">Serve</div><div class="val">4<small> of 10</small></div><p>It answers Nate, not yet the team or clients. Client questions are still answered by hand.</p><div class="bar"><i style="width:40%;background:var(--low)"></i></div></div>
+    </div>
+  </section>
+  <section style="margin-bottom:0">
+    <h2>Being built next, in order</h2>
+    <ol class="next">
+      <li><b>Client records, finished.</b> Routines write to one record per client instead of re-deriving it.</li>
+      <li><b>Status answers for the team.</b> "Where is this client" answered from stored answers, approved by an account manager.</li>
+      <li><b>The metrics layer.</b> Reply times, signed to live and overdue promises per owner, computed so they trend.</li>
+    </ol>
+  </section>
+</div>
+</div>
+
+<div class="foot" style="margin-top:10px"><span>Built by one person with Claude, Make, GitHub and a Telegram bot, August to October 2026. Numbers as of <span data-stat="asof_long">31 October 2026</span>.</span><span>Interactive map: <a href="https://mdrnate-1664.github.io/embedcare-brain-public/">mdrnate-1664.github.io/embedcare-brain-public</a></span></div>
+<script>
+/* Shrink to one Letter page if the fonts on the build machine run wider than expected (7.6in x 10.2in printable). */
+(function(){ var w = 7.6 * 96, hmax = 10.2 * 96 - 4; document.body.style.width = w + 'px';
+  var h = document.body.scrollHeight; if (h > hmax) { document.body.style.zoom = String(hmax / h); } })();
+</script>
+</body>
+</html>
